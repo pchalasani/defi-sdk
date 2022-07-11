@@ -1,12 +1,23 @@
+from typing_extensions import Self
 import requests
 
-from util import read_abi
-from trade import Trade
+from defi_sdk.util import read_abi
+from defi_sdk.trade import Trade
 
 
 class AaveTrade(Trade):
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(
+        self, address_provider="0xa97684ead0e402dC232d5A977953DF7ECBaB3CDb", **kwargs
+    ) -> None:
+        Trade.__init__(self, **kwargs)
+        provider_contract = self.w3.eth.contract(
+            self.w3.toChecksumAddress(address_provider),
+            abi=read_abi(False, "aave_addressprovider_v3"),
+        )
+        pool = provider_contract.functions.getPool().call()
+        self.aave_lending_pool_v3 = self.w3.eth.contract(
+            pool, abi=read_abi(False, "aave_pool_v3")
+        )
 
     def update_holdings(self, asset):
         address = self.user.lower()

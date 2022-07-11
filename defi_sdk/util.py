@@ -31,7 +31,7 @@ def get_web3(network="mainnet") -> Web3:
 def read_abi(address: str, filename: str = False) -> dict:
     # try reading file if exists
     if filename:
-        file_path = os.path.join(os.getcwd(), "src", "abi", f"{filename}.json")
+        file_path = os.path.join(os.getcwd(), "defi_sdk", "abi", f"{filename}.json")
         if os.path.exists(file_path):
             with open(file_path) as f:
                 abi = json.load(f)

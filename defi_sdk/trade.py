@@ -6,35 +6,30 @@ from fireblocks_defi_sdk_py.chain import Chain
 from fireblocks_sdk import FireblocksSDK
 from google.cloud import secretmanager
 
-from util import get_web3, read_abi
+from defi_sdk.util import get_web3, read_abi
 
 
 class Trade:
-    def __init__(self, trade_id: str, network: str, user: str):
+    def __init__(
+        self,
+        trade_id: str,
+        network: str,
+        user: str,
+        test: bool = False,
+        send_tx: bool = False,
+    ):
         self.trade_id = trade_id
         self.network = network
         self.w3 = get_web3(network)
         self.user = user
+
+        self.test = test
+        self.send_tx = send_tx
         self.fb = self.setup_fireblocks()
 
-    def ensure_approval(self, user, token, target, amount):
-        contract = self.w3.eth.contract(
-            token, abi=(read_abi(os.getenv("ERC20"), "token"))
-        )
-        allowance = contract.functions.allowance(user, target).call()
-        logging.info(f"Current allowance: {allowance}, required allowance: {amount}")
-        if allowance > amount:
-            logging.info("Allowance OK")
-            return True
-        else:
-            logging.error(f"Wallet: {user}")
-            logging.error(f"token: {token}")
-            logging.error(f"target: {target}")
-            raise ValueError(
-                f"Not Enough allowance for {user} to spend {token} at {target}"
-            )
-
     def setup_fireblocks(self):
+        client = secretmanager.SecretManagerServiceClient()
+
         if self.test:
             secret_key_id = "projects/712543440434/secrets/fireblocks_secret_key_test/versions/latest"
             secret_api_id = (
@@ -48,7 +43,6 @@ class Trade:
                 "projects/712543440434/secrets/fireblocks_api_key/versions/latest"
             )
 
-        client = secretmanager.SecretManagerServiceClient()
         response = client.access_secret_version(request={"name": secret_key_id})
         fireblocks_secret_key = response.payload.data.decode("UTF-8")
 
@@ -89,3 +83,27 @@ class Trade:
             return fb_bridge.check_tx_is_completed(tx_result["id"])
         else:
             return sim_res
+
+    def ensure_approval(self, user, token, target, amount):
+        contract = self.w3.eth.contract(
+            token, abi=(read_abi(os.getenv("ERC20"), "token"))
+        )
+        allowance = contract.functions.allowance(user, target).call()
+        logging.info(f"Current allowance: {allowance}, required allowance: {amount}")
+        if allowance > amount:
+            logging.info("Allowance OK")
+            return True
+        else:
+            logging.error(f"Wallet: {user}")
+            logging.error(f"token: {token}")
+            logging.error(f"target: {target}")
+            raise ValueError(
+                f"Not Enough allowance for {user} to spend {token} at {target}"
+            )
+
+    def get_current_balance(self, user, token):
+        contract = self.w3.eth.contract(
+            token, abi=read_abi(os.getenv("ERC20"), "token")
+        )
+
+        return contract.functions.balanceOf(user).call()

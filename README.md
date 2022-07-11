@@ -13,3 +13,9 @@ DeFi SDK is meant to handle ALL interactions with blockchain. It is structured t
     - Transactions
 - Staking (generalized frame for getting staked amount + accumulated rewards)
     - Quickswap LP staking
+
+## Google secrets
+- more information: https://cloud.google.com/secret-manager/docs/reference/libraries#create-service-account-console
+- Add secrets to google cloud secret manager
+- Create and download JSON key file to computer
+- export GOOGLE_APPLICATION_CREDENTIALS="path-to-file"

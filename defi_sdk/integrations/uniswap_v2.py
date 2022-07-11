@@ -5,35 +5,26 @@ from datetime import datetime
 
 
 from pytz import UTC
-from util import read_abi, exec_concurrent
+from defi_sdk.util import read_abi, exec_concurrent
+from defi_sdk.trade import Trade
 
 
-class LPTrade:
+class LPTrade(Trade):
     def __init__(
         self,
         lp_address: str,
         exchange: str,
         quote_side: int,
         token_info: dict = {},
-        holding=True,
-        staking_contract="",
+        **kwargs,
     ) -> None:
-        super().__init__()
+        Trade.__init__(self, **kwargs)
         self.lp_contract = self.w3.eth.contract(
             lp_address, abi=read_abi(os.getenv("UNI-PAIR"), "pair")
         )
         self.exchange = exchange
         self.router = self.get_router()
         self.quote_side = quote_side
-        self.holding = holding
-        if not holding:
-            try:
-                # UNI-PAIR ABI has balanceOf, which is the only function we need for now
-                self.staking_contract = self.w3.eth.contract(
-                    staking_contract, abi=read_abi(os.getenv("UNI-PAIR"), "pair")
-                )
-            except:
-                raise ValueError("When not holding, need to provide staking contract")
         if token_info == {}:
             self.token_info = self.get_token_info()
         else:
@@ -47,8 +38,6 @@ class LPTrade:
             "lp_address": self.lp_contract.address,
             "quote_side": self.quote_side,
             "token_info": self.token_info,
-            "holding": self.holding,
-            "staking_contract": self.staking_contract.address,
         }
 
     def get_router(self):
@@ -104,13 +93,11 @@ class LPTrade:
             }
 
     def get_lp_amount(self):
-        if self.holding:
-            return self.lp_contract.functions.balanceOf(self.user).call()
-        else:
-            return self.staking_contract.functions.balanceOf(self.user).call()
+        return self.lp_contract.functions.balanceOf(self.user).call()
 
-    def get_lp_trade(self):
-        lp_token_amount = self.get_lp_amount()
+    def get_lp_trade(self, lp_token_amount=False):
+        if not lp_token_amount:
+            lp_token_amount = self.get_lp_amount()
 
         functions = [
             self.lp_contract.functions.totalSupply(),
@@ -150,7 +137,7 @@ class LPTrade:
         lag = 60 * 5
 
         self.ensure_approval(self.user, path[0], self.router.address, amount)
-        assert self.get_current_balance(path[0]) >= int(amount)
+        assert self.get_current_balance(self.user, path[0]) >= int(amount)
         swap_tx = self.router.functions.swapExactTokensForTokens(
             int(amount), int(min_amount_out), path, self.user, current_ts + lag
         )
@@ -177,32 +164,32 @@ class LPTrade:
 
         if base_as_quote < quote:
             # add liquidity based on base amount
-            base_liq = base
-            quote_liq = base_liq * p
+            base_liq = int(base)
+            quote_liq = int(base_liq * p)
         else:
             # add liquidity based on quote amount
-            quote_liq = quote
-            base_liq = quote / p
+            quote_liq = int(quote)
+            base_liq = int(quote / p)
 
-        quote_min = quote_liq * (1 - max_slippage)
-        base_min = base_liq * (1 - max_slippage)
+        quote_min = int(quote_liq * (1 - max_slippage))
+        base_min = int(base_liq * (1 - max_slippage))
 
         self.ensure_approval(
             self.user,
-            self.tokens["quote"],
+            self.token_info["quote"],
             self.router.address,
             quote_liq,
         )
         self.ensure_approval(
             self.user,
-            self.tokens["base"],
+            self.token_info["base"],
             self.router.address,
             base_liq,
         )
 
         tx = self.router.functions.addLiquidity(
-            self.tokens["quote"],
-            self.tokens["base"],
+            self.token_info["quote"],
+            self.token_info["base"],
             quote_liq,
             base_liq,
             quote_min,
@@ -225,10 +212,12 @@ class LPTrade:
         current_ts = int(datetime.timestamp(datetime.now(UTC)))
         lag = 60 * 5
 
-        self.ensure_approval(self.user, self.lp.address, self.router.address, lp_tokens)
+        self.ensure_approval(
+            self.user, self.lp_contract.address, self.router.address, lp_tokens
+        )
         tx = self.router.functions.removeLiquidity(
-            self.tokens["quote"],
-            self.tokens["base"],
+            self.token_info["quote"],
+            self.token_info["base"],
             lp_tokens,
             quote_min,
             base_min,

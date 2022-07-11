@@ -1,24 +1,24 @@
 import concurrent.futures
 
-from util import read_abi, get_token_price, exec_concurrent
-from trade import Trade
+from defi_sdk.util import read_abi, get_token_price, exec_concurrent
+from defi_sdk.trade import Trade
 
 
 class Staking(Trade):
-    def __init__(self, staking_address, staking_type) -> None:
-        super().__init__()
+    def __init__(self, staking_address, staking_type, **kwargs) -> None:
+        Trade.__init__(self, **kwargs)
 
         self.staking_type = staking_type
         if self.staking_type == "quickswap_lp_staking":
             self.staking_contract = self.w3.eth.contract(
-                staking_address, abi=read_abi(False, "quickswap_staking")
+                staking_address, abi=read_abi(False, "quickswap_lp_staking")
             )
         else:
             raise ValueError("Staking type not implemented")
 
     def get_staked_balance(self):
         if self.staking_type == "quickswap_lp_staking":
-            return self.staking_contract.balanceOf(self.user).call()
+            return self.staking_contract.functions.balanceOf(self.user).call()
 
     def get_rewards(self):
         if self.staking_type == "quickswap_lp_staking":
@@ -52,3 +52,9 @@ class Staking(Trade):
                 f"{token_b_info['symbol']}_value": token_b_value,
                 "reward_value": token_a_value + token_b_value,
             }
+
+    def unstake(self):
+        if self.staking_type == "quickswap_lp_staking":
+            tx = self.staking_contract.functions.withdraw(100)
+            res = self.send_transaction_fireblocks(tx)
+            return True
