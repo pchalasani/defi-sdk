@@ -5,7 +5,6 @@ import requests
 from web3 import Web3
 from web3.middleware import geth_poa_middleware
 import logging
-from pprint import pprint
 
 ETHERSCAN = "https://api.etherscan.io/api"
 
