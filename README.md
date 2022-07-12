@@ -12,7 +12,7 @@ DeFi SDK is meant to handle ALL interactions with blockchain. It is structured t
 - Staking (generalized frame for getting staked amount + accumulated rewards)
     - Quickswap LP staking
 
-## Installing
+## Installing as package
 ```sh
 pip install git+ssh://git@github.com/dkacapitalmgnt/defi-sdk.git
 ```
