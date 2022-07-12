@@ -22,8 +22,8 @@ dependencies = [
     "web3"
 ]
 
-[tool.setuptools.packages.find]
-where = ["defi_sdk"]
+#[tool.setuptools.packages.find]
+#where = ["defi_sdk"]
 
 [project.urls]
 "Homepage" = "https://github.com/pypa/sampleproject"
