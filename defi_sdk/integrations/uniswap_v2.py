@@ -126,20 +126,22 @@ class LPTrade(Trade):
             "price": price,
         }
 
-    def get_quote(self, amount, path):
+    def get_quote(self, amount: int, path: list):
         return self.router.functions.getAmountsOut(amount, path).call()
 
-    def execute_conversion_in(self, amount, path, max_slippage=0.05):
+    def execute_conversion_in(
+        self, amount: int, path: list, max_slippage: float = 0.05
+    ):
         expected_amount_out = self.get_quote(amount, path)[-1]
         logging.info(f"Expected out: {expected_amount_out}")
-        min_amount_out = expected_amount_out * (1 - max_slippage)
+        min_amount_out = int(expected_amount_out * (1 - max_slippage))
         current_ts = int(datetime.timestamp(datetime.now(UTC)))
         lag = 60 * 5
 
         self.ensure_approval(self.user, path[0], self.router.address, amount)
-        assert self.get_current_balance(self.user, path[0]) >= int(amount)
+        assert self.get_current_balance(self.user, path[0]) >= amount
         swap_tx = self.router.functions.swapExactTokensForTokens(
-            int(amount), int(min_amount_out), path, self.user, current_ts + lag
+            amount, min_amount_out, path, self.user, current_ts + lag
         )
         self.send_transaction_fireblocks(swap_tx)
         return True
@@ -202,7 +204,7 @@ class LPTrade(Trade):
         )
         return True
 
-    def remove_liquidity(self, lp_tokens: int, quote_min: int, base_min: int):
+    def remove_liquidity(self, lp_tokens: int, max_slippage: float = 0.02):
         """
         params:
             - lp_tokens: how many LP tokens to withdraw
@@ -211,6 +213,27 @@ class LPTrade(Trade):
         """
         current_ts = int(datetime.timestamp(datetime.now(UTC)))
         lag = 60 * 5
+
+        functions = [
+            self.lp_contract.functions.totalSupply(),
+            self.lp_contract.functions.getReserves(),
+        ]
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(functions)) as pool:
+            pool = [x for x in pool.map(exec_concurrent, functions)]
+
+        total_lp = pool[0]
+        res0, res1, ts = pool[1]
+
+        if self.quote_side == 0:
+            quote_res = res0
+            base_res = res1
+        else:
+            quote_res = res1
+            base_res = res0
+
+        share = lp_tokens / total_lp
+        quote_min = int(share * quote_res * (1 - max_slippage))
+        base_min = int(share * base_res * (1 - max_slippage))
 
         self.ensure_approval(
             self.user, self.lp_contract.address, self.router.address, lp_tokens
