@@ -62,10 +62,15 @@ def get_abi_etherscan(address, network="mainnet"):
     elif network == "polygon":
         params["apikey"] = os.environ.get("polygonscan")
         r = requests.get(POLYGONSCAN, params=params)
-    abi = r.json()["result"]
-    if abi == "Invalid Address format":
-        raise ValueError("Invalid address for getting ABI")
-    return abi
+    res = r.json()
+    try:
+        if res["status"] != 1:
+            logging.error(f"Failed getting ABI: {res['result']}")
+        else:
+            abi = r.json()["result"]
+            return abi
+    except Exception as e:
+        raise ValueError(f"Failed getting ABI: {res}, Error: {e}")
 
 
 def get_router(network, exchange):
