@@ -11,7 +11,10 @@ class Staking(Trade):
         self.staking_type = staking_type
         if self.staking_type == "quickswap_lp_staking":
             self.staking_contract = self.w3.eth.contract(
-                staking_address, abi=read_abi(False, "quickswap_lp_staking")
+                staking_address,
+                abi=read_abi(
+                    staking_address, "quickswap_lp_staking", network="polygon"
+                ),
             )
         else:
             raise ValueError("Staking type not implemented")

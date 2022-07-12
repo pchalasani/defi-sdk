@@ -1,6 +1,5 @@
-from typing_extensions import Self
 import requests
-
+import os
 from defi_sdk.util import read_abi
 from defi_sdk.trade import Trade
 
@@ -12,11 +11,19 @@ class AaveTrade(Trade):
         Trade.__init__(self, **kwargs)
         provider_contract = self.w3.eth.contract(
             self.w3.toChecksumAddress(address_provider),
-            abi=read_abi(False, "aave_addressprovider_v3"),
+            abi=read_abi(
+                address_provider, "aave_addressprovider_v3", network="polygon"
+            ),
         )
         pool = provider_contract.functions.getPool().call()
         self.aave_lending_pool_v3 = self.w3.eth.contract(
-            pool, abi=read_abi(False, "aave_pool_v3")
+            pool,
+            abi=read_abi(
+                # pool implementation, can change...
+                "0xDF9e4ABdbd94107932265319479643D3B05809dc",
+                "aave_pool_v3",
+                network="polygon",
+            ),
         )
 
     def update_holdings(self, asset):
@@ -77,19 +84,19 @@ class AaveTrade(Trade):
                 if int(i["currentStableDebt"]) != 0:
                     cont = self.w3.eth.contract(
                         self.w3.toChecksumAddress(i["reserve"]["sToken"]["id"]),
-                        abi=read_abi(False, "pair"),
+                        abi=read_abi(os.getenv("UNI-PAIR"), "pair"),
                     )
                     val["side"] = "borrow"
                 if int(i["currentVariableDebt"]) != 0:
                     cont = self.w3.eth.contract(
                         self.w3.toChecksumAddress(i["reserve"]["vToken"]["id"]),
-                        abi=read_abi(False, "pair"),
+                        abi=read_abi(os.getenv("UNI-PAIR"), "pair"),
                     )
                     val["side"] = "borrow"
                 if int(i["currentATokenBalance"]) != 0:
                     cont = self.w3.eth.contract(
                         self.w3.toChecksumAddress(i["reserve"]["aToken"]["id"]),
-                        abi=read_abi(False, "pair"),
+                        abi=read_abi(os.getenv("UNI-PAIR"), "pair"),
                     )
                     val["side"] = "collateral"
                 balance = cont.functions.balanceOf(self.user).call()

@@ -7,6 +7,7 @@ from web3.middleware import geth_poa_middleware
 import logging
 
 ETHERSCAN = "https://api.etherscan.io/api"
+POLYGONSCAN = "https://api.polygonscan.com/api"
 
 
 def get_web3(network="mainnet") -> Web3:
@@ -28,16 +29,16 @@ def get_web3(network="mainnet") -> Web3:
         )
 
 
-def read_abi(address: str, filename: str = False) -> dict:
+def read_abi(address: str, filename: str = False, network="mainnet") -> dict:
     # try reading file if exists
     if filename:
-        file_path = os.path.join(os.getcwd(), "defi_sdk", "abi", f"{filename}.json")
+        file_path = os.path.join(os.getcwd(), "abi", f"{filename}.json")
         if os.path.exists(file_path):
             with open(file_path) as f:
                 abi = json.load(f)
                 return abi
         else:
-            abi = get_abi_etherscan(address)
+            abi = get_abi_etherscan(address, network=network)
             with open(file_path, "w") as f:
                 f.write(abi)
             return abi
@@ -45,7 +46,7 @@ def read_abi(address: str, filename: str = False) -> dict:
         return get_abi_etherscan(address)
 
 
-def get_abi_etherscan(address):
+def get_abi_etherscan(address, network="mainnet"):
     # lag to not exceed rate limit by accident
     time.sleep(0.3)
 
@@ -54,9 +55,13 @@ def get_abi_etherscan(address):
         "module": "contract",
         "action": "getabi",
         "address": address,
-        "apikey": os.environ.get("etherscan"),
     }
-    r = requests.get(ETHERSCAN, params=params)
+    if network == "mainnet":
+        params["apikey"] = os.environ.get("etherscan")
+        r = requests.get(ETHERSCAN, params=params)
+    elif network == "polygon":
+        params["apikey"] = os.environ.get("polygonscan")
+        r = requests.get(POLYGONSCAN, params=params)
     abi = r.json()["result"]
     if abi == "Invalid Address format":
         raise ValueError("Invalid address for getting ABI")
