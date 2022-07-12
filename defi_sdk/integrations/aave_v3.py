@@ -103,12 +103,12 @@ class AaveTrade(Trade):
                 val["amount"] = balance / pow(10, val["decimals"])
                 return val
 
-    def borrow_aave_v3(self, amount, asset):
+    def borrow_aave_v3(self, amount: int, asset):
         tx = self.aave_lending_pool_v3.functions.borrow(asset, amount, 2, 0, self.user)
         self.send_transaction_fireblocks(tx)
         return True
 
-    def repay_aave_v3(self, amount, asset):
+    def repay_aave_v3(self, amount: int, asset):
         tx = self.aave_lending_pool_v3.functions.repay(asset, amount, 2, self.user)
         self.send_transaction_fireblocks(tx)
         return True
