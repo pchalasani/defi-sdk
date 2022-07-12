@@ -64,8 +64,9 @@ def get_abi_etherscan(address, network="mainnet"):
         r = requests.get(POLYGONSCAN, params=params)
     res = r.json()
     try:
-        if res["status"] != 1:
+        if int(res["status"]) != 1:
             logging.error(f"Failed getting ABI: {res['result']}")
+            raise ValueError(f"Failed getting ABI: {res['result']}")
         else:
             abi = r.json()["result"]
             return abi

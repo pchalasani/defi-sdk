@@ -18,6 +18,11 @@ class Trade:
         test: bool = False,
         send_tx: bool = False,
     ):
+        # test if environment variables are found
+        assert (
+            os.getenv("ERC20") != None,
+            "Expected to find ERC20 at environments, is .env loaded?",
+        )
         self.trade_id = trade_id
         self.network = network
         self.w3 = get_web3(network)
