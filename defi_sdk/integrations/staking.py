@@ -2,12 +2,12 @@ import logging
 import concurrent.futures
 
 from defi_sdk.util import read_abi, get_token_price, exec_concurrent
-from defi_sdk.trade import Trade
+from defi_sdk.defi_trade import DeFiTrade
 
 
-class Staking(Trade):
+class Staking(DeFiTrade):
     def __init__(self, staking_address, staking_type, **kwargs) -> None:
-        Trade.__init__(self, **kwargs)
+        DeFiTrade.__init__(self, **kwargs)
 
         self.staking_type = staking_type
         if self.staking_type == "quickswap_lp_staking":

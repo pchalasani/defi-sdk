@@ -1,5 +1,4 @@
 from defi_sdk.integrations.aave_v3 import AaveTrade
-from defi_sdk.trade import Trade
 from tests.addresses import (
     FIREBLOCKS_VAULT,
     POLYGON_USDC,

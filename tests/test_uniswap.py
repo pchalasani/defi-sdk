@@ -16,7 +16,6 @@ load_dotenv(".env")
 lp_1 = LPTrade(
     lp_address=POLYGON_USDC_WETH_LP,
     exchange="quickswap",
-    quote_side=0,
     trade_id="test",
     network="polygon",
     user=FIREBLOCKS_VAULT,
@@ -27,7 +26,6 @@ lp_1 = LPTrade(
 lp_2 = LPTrade(
     lp_address=ROPSTEN_DAI_WETH_LP,
     exchange="uniswap",
-    quote_side=0,
     trade_id="test",
     network="ropsten",
     user=FIREBLOCKS_ROPSTEN,
@@ -43,8 +41,8 @@ def test_get_router():
 
 def get_token_info():
     res = lp_1.get_token_info()
-    assert res["quote"] == POLYGON_USDC
-    assert res["base"] == POLYGON_WETH
+    assert res["token1"] == POLYGON_USDC
+    assert res["token0"] == POLYGON_WETH
 
 
 def test_get_lp_amount():
@@ -58,10 +56,10 @@ def test_conversion():
 
 
 def test_add_liquidity():
-    res = lp_2.add_liquidity(10, 10, 1)
+    res = lp_2.add_liquidity(10, 10)
     assert res == True
 
 
 def test_remove_liquidity():
-    res = lp_1.remove_liquidity(100, 0, 0)
+    res = lp_1.remove_liquidity(100)
     assert res == True
