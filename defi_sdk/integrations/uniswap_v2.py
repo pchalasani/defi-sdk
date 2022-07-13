@@ -6,10 +6,10 @@ from datetime import datetime
 
 from pytz import UTC
 from defi_sdk.util import read_abi, exec_concurrent
-from defi_sdk.trade import Trade
+from defi_sdk.defi_trade import DeFiTrade
 
 
-class LPTrade(Trade):
+class LPTrade(DeFiTrade):
     def __init__(
         self,
         lp_address: str,
@@ -144,6 +144,8 @@ class LPTrade(Trade):
             amount, min_amount_out, path, self.user, current_ts + lag
         )
         self.send_transaction_fireblocks(swap_tx)
+        if self.send_tx:
+            logging.info(f"Sent {self.exchange} convert amountIn transaction")
         return True
 
     def add_liquidity(self, quote: int, base: int, max_slippage: float = 0.02):
@@ -202,6 +204,8 @@ class LPTrade(Trade):
         self.send_transaction_fireblocks(
             tx,
         )
+        if self.send_tx:
+            logging.info(f"Sent {self.exchange} add liquidity transaction")
         return True
 
     def remove_liquidity(self, lp_tokens: int, max_slippage: float = 0.02):
@@ -249,4 +253,6 @@ class LPTrade(Trade):
         )
 
         self.send_transaction_fireblocks(tx)
+        if self.send_tx:
+            logging.info(f"Sent {self.exchange} remove liquidity transaction")
         return True

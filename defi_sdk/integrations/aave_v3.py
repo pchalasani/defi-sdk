@@ -1,14 +1,15 @@
+import logging
 import requests
 import os
 from defi_sdk.util import read_abi
-from defi_sdk.trade import Trade
+from defi_sdk.defi_trade import DeFiTrade
 
 
-class AaveTrade(Trade):
+class AaveTrade(DeFiTrade):
     def __init__(
         self, address_provider="0xa97684ead0e402dC232d5A977953DF7ECBaB3CDb", **kwargs
     ) -> None:
-        Trade.__init__(self, **kwargs)
+        DeFiTrade.__init__(self, **kwargs)
         provider_contract = self.w3.eth.contract(
             self.w3.toChecksumAddress(address_provider),
             abi=read_abi(
@@ -106,9 +107,13 @@ class AaveTrade(Trade):
     def borrow_aave_v3(self, amount: int, asset):
         tx = self.aave_lending_pool_v3.functions.borrow(asset, amount, 2, 0, self.user)
         self.send_transaction_fireblocks(tx)
+        if self.send_tx:
+            logging.info("Sent Aave v3 borrow transaction")
         return True
 
     def repay_aave_v3(self, amount: int, asset):
         tx = self.aave_lending_pool_v3.functions.repay(asset, amount, 2, self.user)
         self.send_transaction_fireblocks(tx)
+        if self.send_tx:
+            logging.info("Sent Aave v3 repay transaction")
         return True

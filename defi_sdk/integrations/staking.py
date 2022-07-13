@@ -1,3 +1,4 @@
+import logging
 import concurrent.futures
 
 from defi_sdk.util import read_abi, get_token_price, exec_concurrent
@@ -60,4 +61,6 @@ class Staking(Trade):
         if self.staking_type == "quickswap_lp_staking":
             tx = self.staking_contract.functions.withdraw(100)
             res = self.send_transaction_fireblocks(tx)
+            if self.send_tx:
+                logging.info("Sent quickswap unstake transaction")
             return True
