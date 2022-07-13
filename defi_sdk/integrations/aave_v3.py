@@ -100,8 +100,7 @@ class AaveTrade(DeFiTrade):
                         abi=read_abi(os.getenv("UNI-PAIR"), "pair"),
                     )
                     val["side"] = "collateral"
-                balance = cont.functions.balanceOf(self.user).call()
-                val["amount"] = balance / pow(10, val["decimals"])
+                val["amount"] = cont.functions.balanceOf(self.user).call()
                 return val
 
     def borrow_aave_v3(self, amount: int, asset):

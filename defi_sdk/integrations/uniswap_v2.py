@@ -89,8 +89,8 @@ class LPTrade(DeFiTrade):
         token1_amount = int(share * info[1][1])
 
         return {
-            "token0_amount": token0_amount,
-            "token1_amount": token1_amount,
+            "token0": token0_amount,
+            "token1": token1_amount,
             "lp_tokens": lp_token_amount,
             "total_lp_tokens": info[0],
         }
