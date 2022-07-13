@@ -14,31 +14,19 @@ class LPTrade(DeFiTrade):
         self,
         lp_address: str,
         exchange: str,
-        quote_side: int,
         token_info: dict = {},
         **kwargs,
     ) -> None:
-        Trade.__init__(self, **kwargs)
+        DeFiTrade.__init__(self, **kwargs)
         self.lp_contract = self.w3.eth.contract(
             lp_address, abi=read_abi(os.getenv("UNI-PAIR"), "pair")
         )
         self.exchange = exchange
         self.router = self.get_router()
-        self.quote_side = quote_side
         if token_info == {}:
             self.token_info = self.get_token_info()
         else:
             self.token_info = token_info
-
-    def __repr__(self):
-        return {
-            "trade_id": self.trade_id,
-            "network": self.network,
-            "user": self.user,
-            "lp_address": self.lp_contract.address,
-            "quote_side": self.quote_side,
-            "token_info": self.token_info,
-        }
 
     def get_router(self):
         routers = {
@@ -73,24 +61,14 @@ class LPTrade(DeFiTrade):
         with concurrent.futures.ThreadPoolExecutor(max_workers=len(func_token)) as pool:
             token_info = [x for x in pool.map(exec_concurrent, func_token)]
 
-        if self.quote_side == 0:
-            return {
-                "quote": tok0.address,
-                "quote_decimals": token_info[0],
-                "quote_symbol": token_info[1],
-                "base": tok1.address,
-                "base_decimals": token_info[2],
-                "base_symbol": token_info[3],
-            }
-        else:
-            return {
-                "quote": tok1.address,
-                "quote_decimals": token_info[2],
-                "quote_symbol": token_info[3],
-                "base": tok0.address,
-                "base_decimals": token_info[0],
-                "base_symbol": token_info[1],
-            }
+        return {
+            "token0": tok0.address,
+            "token0_decimals": token_info[0],
+            "token0_symbol": token_info[1],
+            "token1": tok1.address,
+            "token1_decimals": token_info[2],
+            "token1_symbol": token_info[3],
+        }
 
     def get_lp_amount(self):
         return self.lp_contract.functions.balanceOf(self.user).call()
@@ -110,20 +88,11 @@ class LPTrade(DeFiTrade):
         token0_amount = int(share * info[1][0])
         token1_amount = int(share * info[1][1])
 
-        if self.quote_side == 0:
-            quote_holdings = token0_amount / pow(10, self.token_info["quote_decimals"])
-            base_holdings = token1_amount / pow(10, self.token_info["base_decimals"])
-        else:
-            base_holdings = token0_amount / pow(10, self.token_info["base_decimals"])
-            quote_holdings = token1_amount / pow(10, self.token_info["quote_decimals"])
-        price = quote_holdings / base_holdings
-        value = quote_holdings + base_holdings * price
-
         return {
-            "trade_value": value,
-            "quote_tokens": quote_holdings,
-            "base_tokens": base_holdings,
-            "price": price,
+            "token0_amount": token0_amount,
+            "token1_amount": token1_amount,
+            "lp_tokens": lp_token_amount,
+            "total_lp_tokens": info[0],
         }
 
     def get_quote(self, amount: int, path: list):
@@ -148,7 +117,9 @@ class LPTrade(DeFiTrade):
             logging.info(f"Sent {self.exchange} convert amountIn transaction")
         return True
 
-    def add_liquidity(self, quote: int, base: int, max_slippage: float = 0.02):
+    def add_liquidity(
+        self, token0_amount: int, token1_amount: int, max_slippage: float = 0.02
+    ):
         """
         params:
             - quote: amount of quote assets to provide (or current balance if max)
@@ -159,45 +130,42 @@ class LPTrade(DeFiTrade):
         current_ts = int(datetime.timestamp(datetime.now(UTC)))
         lag = 60 * 5
         res0, res1, ts = self.lp_contract.functions.getReserves().call()
-        if self.quote_side == 0:
-            p = res0 / res1
+        p = res0 / res1
+
+        token1_as_token0 = p * token1_amount
+
+        if token0_amount <= token1_as_token0:
+            # add liquidity based on token0 amount
+            token0_liquidity = token0_amount
+            token1_liquidity = int(token0_amount / p)
         else:
-            p = res1 / res0
+            # add liquidity based on token1 amount
+            token1_liquidity = token1_amount
+            token0_liquidity = int(token1_amount * p)
 
-        base_as_quote = p * base
-
-        if base_as_quote < quote:
-            # add liquidity based on base amount
-            base_liq = int(base)
-            quote_liq = int(base_liq * p)
-        else:
-            # add liquidity based on quote amount
-            quote_liq = int(quote)
-            base_liq = int(quote / p)
-
-        quote_min = int(quote_liq * (1 - max_slippage))
-        base_min = int(base_liq * (1 - max_slippage))
+        token0_minimum = int(token0_liquidity * (1 - max_slippage))
+        token1_minimum = int(token1_liquidity * (1 - max_slippage))
 
         self.ensure_approval(
             self.user,
-            self.token_info["quote"],
+            self.token_info["token0"],
             self.router.address,
-            quote_liq,
+            token0_liquidity,
         )
         self.ensure_approval(
             self.user,
-            self.token_info["base"],
+            self.token_info["token1"],
             self.router.address,
-            base_liq,
+            token1_liquidity,
         )
 
         tx = self.router.functions.addLiquidity(
-            self.token_info["quote"],
-            self.token_info["base"],
-            quote_liq,
-            base_liq,
-            quote_min,
-            base_min,
+            self.token_info["token0"],
+            self.token_info["token1"],
+            token0_liquidity,
+            token1_liquidity,
+            token0_minimum,
+            token1_minimum,
             self.user,
             current_ts + lag,
         )
@@ -226,28 +194,21 @@ class LPTrade(DeFiTrade):
             pool = [x for x in pool.map(exec_concurrent, functions)]
 
         total_lp = pool[0]
-        res0, res1, ts = pool[1]
-
-        if self.quote_side == 0:
-            quote_res = res0
-            base_res = res1
-        else:
-            quote_res = res1
-            base_res = res0
+        reserve0, reserve1, ts = pool[1]
 
         share = lp_tokens / total_lp
-        quote_min = int(share * quote_res * (1 - max_slippage))
-        base_min = int(share * base_res * (1 - max_slippage))
+        token0_minimum = int(share * reserve0 * (1 - max_slippage))
+        token1_minimum = int(share * reserve1 * (1 - max_slippage))
 
         self.ensure_approval(
             self.user, self.lp_contract.address, self.router.address, lp_tokens
         )
         tx = self.router.functions.removeLiquidity(
-            self.token_info["quote"],
-            self.token_info["base"],
+            self.token_info["token0"],
+            self.token_info["token1"],
             lp_tokens,
-            quote_min,
-            base_min,
+            token0_minimum,
+            token1_minimum,
             self.user,
             current_ts + lag,
         )
