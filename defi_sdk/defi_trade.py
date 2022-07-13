@@ -9,7 +9,7 @@ from google.cloud import secretmanager
 from defi_sdk.util import get_web3, read_abi
 
 
-class Trade:
+class DeFiTrade:
     def __init__(
         self,
         trade_id: str,
