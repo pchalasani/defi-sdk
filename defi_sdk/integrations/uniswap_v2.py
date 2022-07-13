@@ -2,6 +2,7 @@ import os
 import concurrent.futures
 import logging
 from datetime import datetime
+from pyrsistent import m
 
 
 from pytz import UTC
@@ -93,6 +94,9 @@ class LPTrade(DeFiTrade):
             "token1": token1_amount,
             "lp_tokens": lp_token_amount,
             "total_lp_tokens": info[0],
+            "reserve0": info[1][0],
+            "reserve1": info[1][1],
+            "pool_total_tokens": info[0],
         }
 
     def get_quote(self, amount: int, path: list):
