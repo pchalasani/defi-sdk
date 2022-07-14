@@ -99,7 +99,8 @@ class DeFiTrade:
         else:
             logging.info(f"Not enough allowance")
             if self.send_tx:
-                contract.functions.approve(user, int(amount) * pow(10, 5))
+                approval_tx = contract.functions.approve(user, int(amount) * pow(10, 5))
+                self.send_transaction_fireblocks(approval_tx)
             logging.error(f"Wallet: {user}")
             logging.error(f"token: {token}")
             logging.error(f"target: {target}")
