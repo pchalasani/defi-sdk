@@ -1,6 +1,6 @@
 import os
 import logging
-
+import time
 from fireblocks_defi_sdk_py.web3_bridge import Web3Bridge
 from fireblocks_defi_sdk_py.chain import Chain
 from fireblocks_sdk import FireblocksSDK
@@ -69,8 +69,25 @@ class DeFiTrade:
         logging.debug(f"result: {sim_res}")
         logging.debug("sending transaction")
         if self.send_tx:
-            tx_raw = tx.buildTransaction({"from": self.user})
-            fb_bridge = self.get_fb_bridge()
+            for attempt in range(4):
+                # try to build transaction
+                try:
+                    tx_raw = tx.buildTransaction({"from": self.user})
+                    fb_bridge = self.get_fb_bridge()
+                # if fails, log error and sleep 3
+                except Exception as e:
+                    logging.info(f"Failed building tx: {e}")
+                    time.sleep(3)
+                # if succeeds, break loop
+                else:
+                    break
+            # if loop ended without breaking, trigger error
+            else:
+                logging.info(f"Retries exceeded while building TX")
+                raise e
+
+            # To Do: handle errors and retry if needed
+            # Consider that transaction could be pending when retrying for errors, cannot blindly retry
             try:
                 tx_result = fb_bridge.send_transaction(tx_raw, test=self.test)
             except Exception as e:
