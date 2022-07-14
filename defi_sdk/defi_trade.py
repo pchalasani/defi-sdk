@@ -12,7 +12,6 @@ from defi_sdk.util import get_web3, read_abi
 class DeFiTrade:
     def __init__(
         self,
-        position_id: str,
         network: str,
         user: str,
         test: bool = False,
@@ -23,7 +22,6 @@ class DeFiTrade:
             os.getenv("ERC20") != None,
             "Expected to find ERC20 at environments, is .env loaded?",
         )
-        self.trade_id = position_id
         self.network = network
         self.w3 = get_web3(network)
         self.user = user
