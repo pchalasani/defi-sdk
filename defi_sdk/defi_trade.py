@@ -97,6 +97,9 @@ class DeFiTrade:
             logging.info("Allowance OK")
             return True
         else:
+            logging.info(f"Not enough allowance")
+            if self.send_tx:
+                contract.functions.approve(user, int(amount) * pow(10, 5))
             logging.error(f"Wallet: {user}")
             logging.error(f"token: {token}")
             logging.error(f"target: {target}")
