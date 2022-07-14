@@ -20,7 +20,7 @@ pip install git+ssh://git@github.com/dkacapitalmgnt/defi-sdk.git
 ## Google secrets
 - Add secrets to google cloud secret manager
 - Create and download JSON key file to computer
-- export GOOGLE_APPLICATION_CREDENTIALS="path-to-file"
+- export GOOGLE_APPLICATION_CREDENTIALS="path-to-file" (no quotes)
 - more information: https://cloud.google.com/secret-manager/docs/reference/libraries#create-service-account-console
 
 ## Updating

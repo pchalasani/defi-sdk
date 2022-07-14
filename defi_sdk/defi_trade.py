@@ -17,11 +17,6 @@ class DeFiTrade:
         test: bool = False,
         send_tx: bool = False,
     ):
-        # test if environment variables are found
-        assert (
-            os.getenv("ERC20") != None,
-            "Expected to find ERC20 at environments, is .env loaded?",
-        )
         self.network = network
         self.w3 = get_web3(network)
         self.user = user
@@ -99,14 +94,18 @@ class DeFiTrade:
         else:
             logging.info(f"Not enough allowance")
             if self.send_tx:
-                approval_tx = contract.functions.approve(user, int(amount) * pow(10, 5))
+                approval_tx = contract.functions.approve(
+                    target, int(amount) * pow(10, 5)
+                )
+                logging.info(f"Sending approval transaction")
                 self.send_transaction_fireblocks(approval_tx)
-            logging.error(f"Wallet: {user}")
-            logging.error(f"token: {token}")
-            logging.error(f"target: {target}")
-            raise ValueError(
-                f"Not Enough allowance for {user} to spend {token} at {target}"
-            )
+            else:
+                logging.error(f"Wallet: {user}")
+                logging.error(f"token: {token}")
+                logging.error(f"target: {target}")
+                raise ValueError(
+                    f"Not Enough allowance for {user} to spend {token} at {target}"
+                )
 
     def get_current_balance(self, user, token):
         contract = self.w3.eth.contract(
