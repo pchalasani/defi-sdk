@@ -187,6 +187,13 @@ class LPTrade(DeFiTrade):
             - quote_min: minimum amount of quote tokens to receive
             - base_min: minimum amount of base tokens to receive
         """
+        current_lp_balance = self.get_current_balance(
+            self.user, self.lp_contract.address
+        )
+        assert (
+            current_lp_balance >= lp_tokens,
+            "Not enough LP tokens to withdraw desired amount",
+        )
         current_ts = int(datetime.timestamp(datetime.now(UTC)))
         lag = 60 * 5
 

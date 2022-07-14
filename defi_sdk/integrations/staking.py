@@ -18,7 +18,7 @@ class Staking(DeFiTrade):
                 ),
             )
         else:
-            raise ValueError("Staking type not implemented")
+            raise NotImplementedError(f"Staking type {staking_type} not implemented")
 
     def get_staked_balance(self):
         if self.staking_type == "quickswap_lp_staking":
@@ -57,10 +57,18 @@ class Staking(DeFiTrade):
                 "reward_value": token_a_value + token_b_value,
             }
 
-    def unstake(self):
+    def unstake(self, amount: int):
         if self.staking_type == "quickswap_lp_staking":
-            tx = self.staking_contract.functions.withdraw(100)
+            tx = self.staking_contract.functions.withdraw(amount)
             res = self.send_transaction_fireblocks(tx)
             if self.send_tx:
                 logging.info("Sent quickswap unstake transaction")
+            return True
+
+    def stake(self, amount: int):
+        if self.staking_type == "quickswap_lp_staking":
+            tx = self.staking_contract.functions.stake(amount)
+            res = self.send_transaction_fireblocks(tx)
+            if self.send_tx:
+                logging.info("Sent quickswap staking transaction")
             return True
