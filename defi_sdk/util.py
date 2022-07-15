@@ -8,6 +8,10 @@ import logging
 
 ETHERSCAN = "https://api.etherscan.io/api"
 POLYGONSCAN = "https://api.polygonscan.com/api"
+from google.cloud import storage
+
+client = storage.Client()
+bucket = client.get_bucket("smart-contract-abis")
 
 
 def get_web3(network="mainnet") -> Web3:
@@ -29,21 +33,31 @@ def get_web3(network="mainnet") -> Web3:
         )
 
 
-def read_abi(address: str, filename: str = False, network="mainnet") -> dict:
-    # try reading file if exists
-    if filename and not int(os.getenv("CLOUD")) == 1:
-        file_path = os.path.join(os.getcwd(), "abi", f"{filename}.json")
-        if os.path.exists(file_path):
-            with open(file_path) as f:
-                abi = json.load(f)
-                return abi
-        else:
-            abi = get_abi_etherscan(address, network=network)
-            with open(file_path, "w") as f:
-                f.write(abi)
+def read_abi(address: str = "", filename="", network="mainnet", cloud=False) -> dict:
+    # If cloud, read from google storage
+    if int(os.getenv("CLOUD")) == 1 or cloud:
+        blob = bucket.get_blob(f"{filename}.json")
+        # if found it, everything is ok
+        if blob:
+            abi = blob.download_as_bytes().decode("utf-8")
             return abi
+        # else try to read from etherscan
+        else:
+            logging.info(f"{filename} not found on Cloud storage")
+            return get_abi_etherscan(address, network=network)
     else:
-        return get_abi_etherscan(address)
+        if filename:
+            file_path = os.path.join(os.getcwd(), "abi", f"{filename}.json")
+            if os.path.exists(file_path):
+                with open(file_path) as f:
+                    abi = json.load(f)
+                    return abi
+            else:
+                logging.info(f"{filename} not found on local storage")
+                abi = get_abi_etherscan(address, network=network)
+                with open(file_path, "w") as f:
+                    f.write(abi)
+                return abi
 
 
 def get_abi_etherscan(address, network="mainnet"):
@@ -67,13 +81,15 @@ def get_abi_etherscan(address, network="mainnet"):
         if int(res["status"]) != 1:
             logging.error(f"Failed getting ABI for address: {address} {res['result']}")
             raise ValueError(
-                f"Failed getting ABI for address: {address} {res['result']}"
+                f"Failed getting ABI for address: {address}, {network} {res['result']}"
             )
         else:
             abi = r.json()["result"]
             return abi
     except Exception as e:
-        raise ValueError(f"Failed getting ABI for address: {address} {res}, Error: {e}")
+        raise ValueError(
+            f"Failed getting ABI for address: {address}, {network} {res}, Error: {e}"
+        )
 
 
 def get_router(network, exchange):

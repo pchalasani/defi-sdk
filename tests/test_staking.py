@@ -9,7 +9,6 @@ def test_get_balance():
     stake = Staking(
         staking_address=POLYGON_QUICKSWAP_STAKING,
         staking_type="quickswap_lp_staking",
-        trade_id="test",
         network="polygon",
         user=FIREBLOCKS_VAULT,
         test=False,
@@ -24,7 +23,6 @@ def test_get_rewards():
     stake = Staking(
         staking_address=POLYGON_QUICKSWAP_STAKING,
         staking_type="quickswap_lp_staking",
-        trade_id="test",
         network="polygon",
         user=FIREBLOCKS_VAULT,
         test=False,
@@ -40,13 +38,12 @@ def test_unstake():
     stake = Staking(
         staking_address=POLYGON_QUICKSWAP_STAKING,
         staking_type="quickswap_lp_staking",
-        trade_id="test",
         network="polygon",
         user=FIREBLOCKS_VAULT,
         test=False,
         send_tx=False,
     )
 
-    res = stake.unstake()
+    res = stake.unstake(10)
 
     assert res == True

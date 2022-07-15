@@ -2,3 +2,4 @@ fireblocks-defi-sdk-py @ git+https://github.com/dkacapitalmgnt/fireblocks-defi-s
 web3
 google-cloud-secret-manager
 python-dotenv
+pytz

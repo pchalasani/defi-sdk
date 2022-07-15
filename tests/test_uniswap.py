@@ -16,7 +16,6 @@ load_dotenv(".env")
 lp_1 = LPTrade(
     lp_address=POLYGON_USDC_WETH_LP,
     exchange="quickswap",
-    trade_id="test",
     network="polygon",
     user=FIREBLOCKS_VAULT,
     test=False,
@@ -26,7 +25,6 @@ lp_1 = LPTrade(
 lp_2 = LPTrade(
     lp_address=ROPSTEN_DAI_WETH_LP,
     exchange="uniswap",
-    trade_id="test",
     network="ropsten",
     user=FIREBLOCKS_ROPSTEN,
     test=True,

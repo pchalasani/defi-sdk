@@ -12,7 +12,6 @@ load_dotenv(".env")
 def test_get_holdings_collateral():
 
     aave = AaveTrade(
-        trade_id="test",
         network="polygon",
         user=FIREBLOCKS_VAULT,
         test=False,
@@ -24,7 +23,6 @@ def test_get_holdings_collateral():
 
 def test_get_holdings_debt():
     aave = AaveTrade(
-        trade_id="test",
         network="polygon",
         user=FIREBLOCKS_VAULT,
         test=False,
@@ -36,7 +34,6 @@ def test_get_holdings_debt():
 
 def test_borrow_aave_not_send():
     aave = AaveTrade(
-        trade_id="test",
         network="polygon",
         user=FIREBLOCKS_VAULT,
         test=False,

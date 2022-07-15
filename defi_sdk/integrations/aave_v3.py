@@ -12,19 +12,12 @@ class AaveTrade(DeFiTrade):
         DeFiTrade.__init__(self, **kwargs)
         provider_contract = self.w3.eth.contract(
             self.w3.toChecksumAddress(address_provider),
-            abi=read_abi(
-                address_provider, "aave_addressprovider_v3", network="polygon"
-            ),
+            abi=read_abi(filename="aave_addressprovider_v3", cloud=True),
         )
         pool = provider_contract.functions.getPool().call()
         self.aave_lending_pool_v3 = self.w3.eth.contract(
             pool,
-            abi=read_abi(
-                # pool implementation, can change...
-                "0xDF9e4ABdbd94107932265319479643D3B05809dc",
-                "aave_pool_v3",
-                network="polygon",
-            ),
+            abi=read_abi(filename="aave_pool_v3", cloud=True),
         )
 
     def update_holdings(self, asset):
