@@ -21,6 +21,7 @@ dependencies = [
     "fireblocks-defi-sdk-py @ git+https://github.com/dkacapitalmgnt/fireblocks-defi-sdk-py.git@d6844a9703e81e8edc76b9d5abb8672cd7baf786",
     "web3",
     "google-cloud-secret-manager",
+    "google-cloud-storage",
     "python-dotenv",
     "pytz"
 ]
