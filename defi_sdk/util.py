@@ -65,13 +65,15 @@ def get_abi_etherscan(address, network="mainnet"):
     res = r.json()
     try:
         if int(res["status"]) != 1:
-            logging.error(f"Failed getting ABI: {res['result']}")
-            raise ValueError(f"Failed getting ABI: {res['result']}")
+            logging.error(f"Failed getting ABI for address: {address} {res['result']}")
+            raise ValueError(
+                f"Failed getting ABI for address: {address} {res['result']}"
+            )
         else:
             abi = r.json()["result"]
             return abi
     except Exception as e:
-        raise ValueError(f"Failed getting ABI: {res}, Error: {e}")
+        raise ValueError(f"Failed getting ABI for address: {address} {res}, Error: {e}")
 
 
 def get_router(network, exchange):
