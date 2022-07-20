@@ -109,7 +109,7 @@ class LPTrade(DeFiTrade):
         logging.info(f"Expected out: {expected_amount_out}")
         min_amount_out = int(expected_amount_out * (1 - max_slippage))
         current_ts = int(datetime.timestamp(datetime.now(UTC)))
-        lag = 60 * 5
+        lag = 10 * 60
 
         self.ensure_approval(self.user, path[0], self.router.address, amount)
         assert self.get_current_balance(self.user, path[0]) >= amount
@@ -132,7 +132,7 @@ class LPTrade(DeFiTrade):
                 - price can move out of balance which then would revert transaction if 0
         """
         current_ts = int(datetime.timestamp(datetime.now(UTC)))
-        lag = 60 * 5
+        lag = 10 * 60
         res0, res1, ts = self.lp_contract.functions.getReserves().call()
         p = res0 / res1
 
@@ -195,8 +195,7 @@ class LPTrade(DeFiTrade):
             "Not enough LP tokens to withdraw desired amount",
         )
         current_ts = int(datetime.timestamp(datetime.now(UTC)))
-        lag = 60 * 5
-
+        lag = 10 * 60
         functions = [
             self.lp_contract.functions.totalSupply(),
             self.lp_contract.functions.getReserves(),
