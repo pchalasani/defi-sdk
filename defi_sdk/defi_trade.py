@@ -74,11 +74,11 @@ class DeFiTrade:
                 try:
                     tx_raw = tx.buildTransaction({"from": self.user})
                     fb_bridge = self.get_fb_bridge()
-                # if fails, log error and sleep 3
+                # if fails, log error and sleep 5
                 except Exception as e:
                     logging.info(f"Failed building tx: {e}")
-                    time.sleep(3)
-                # if succeeds, break loop
+                    time.sleep(5)
+                # if succeeds, break loop to continue
                 else:
                     break
             # if loop ended without breaking, trigger error
@@ -94,8 +94,14 @@ class DeFiTrade:
                 logging.error(f"Failed sending fireblocks transaction")
                 logging.error(e)
                 raise ConnectionError()
-
-            return fb_bridge.check_tx_is_completed(tx_result["id"])
+            for attempt in range(3):
+                try:
+                    return fb_bridge.check_tx_is_completed(tx_result["id"])
+                except Exception as e:
+                    logging.info(f"Failed getting tx status from fireblocks: {e}")
+            else:
+                logging.info(f"Retries exceeded while waiting fireblock transaction")
+                raise e
         else:
             return sim_res
 
