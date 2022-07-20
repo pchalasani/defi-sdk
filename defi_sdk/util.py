@@ -33,7 +33,12 @@ def get_web3(network="mainnet") -> Web3:
         )
 
 
+abi_dict = {}
+
+
 def read_abi(address: str = "", filename="", network="mainnet", cloud=False) -> dict:
+    if filename in abi_dict:
+        return abi_dict[filename]
     # If cloud, read from google storage
     if int(os.getenv("CLOUD")) == 1 or cloud:
         blob = bucket.get_blob(f"{filename}.json")
@@ -44,20 +49,22 @@ def read_abi(address: str = "", filename="", network="mainnet", cloud=False) -> 
         # else try to read from etherscan
         else:
             logging.info(f"{filename} not found on Cloud storage")
-            return get_abi_etherscan(address, network=network)
+            abi = get_abi_etherscan(address, network=network)
     else:
         if filename:
             file_path = os.path.join(os.getcwd(), "abi", f"{filename}.json")
             if os.path.exists(file_path):
                 with open(file_path) as f:
                     abi = json.load(f)
-                    return abi
+
             else:
                 logging.info(f"{filename} not found on local storage")
                 abi = get_abi_etherscan(address, network=network)
                 with open(file_path, "w") as f:
                     f.write(abi)
-                return abi
+
+    abi_dict[filename] = abi
+    return abi
 
 
 def get_abi_etherscan(address, network="mainnet"):
