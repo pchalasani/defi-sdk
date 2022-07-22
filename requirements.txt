@@ -13,7 +13,6 @@ charset-normalizer==2.1.0
 click==8.1.3
 cryptography==37.0.4
 cytoolz==0.12.0
-dka-defi-sdk @ file:///Users/juusoahlroos/Documents/dka/repos/defi-sdk
 eth-abi==2.1.1
 eth-account==0.5.8
 eth-hash==0.4.0
@@ -22,7 +21,7 @@ eth-keys==0.3.4
 eth-rlp==0.2.1
 eth-typing==2.3.0
 eth-utils==1.9.5
-fireblocks-defi-sdk-py @ git+https://github.com/dkacapitalmgnt/fireblocks-defi-sdk-py.git@d6844a9703e81e8edc76b9d5abb8672cd7baf786
+fireblocks-defi-sdk-py @ git+https://github.com/dkacapitalmgnt/fireblocks-defi-sdk-py.git@main
 fireblocks-sdk==1.17.0
 frozenlist==1.3.0
 google-api-core==2.8.2
