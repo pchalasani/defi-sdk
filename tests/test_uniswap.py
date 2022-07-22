@@ -1,4 +1,3 @@
-import re
 from defi_sdk.integrations.uniswap_v2 import LPTrade
 from tests.addresses import (
     FIREBLOCKS_VAULT,

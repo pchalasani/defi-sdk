@@ -40,7 +40,7 @@ def read_abi(address: str = "", filename="", network="mainnet", cloud=False) -> 
     if filename in abi_dict:
         return abi_dict[filename]
     # If cloud, read from google storage
-    if int(os.getenv("CLOUD")) == 1 or cloud:
+    if int(os.getenv("CLOUD", 0)) == 1 or cloud:
         blob = bucket.get_blob(f"{filename}.json")
         # if found it, everything is ok
         if blob:
