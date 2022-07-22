@@ -24,6 +24,7 @@ class DeFiTrade:
         self.test = test
         self.send_tx = send_tx
         self.fb = self.setup_fireblocks()
+        self.fb_bridge = self.get_fb_bridge()
 
     def setup_fireblocks(self):
         client = secretmanager.SecretManagerServiceClient()
@@ -63,45 +64,49 @@ class DeFiTrade:
         )
         return fb_bridge
 
+    def _build_transaction(self, tx):
+        for attempt in range(4):
+            try:
+                tx_raw = tx.build_transaction({"from": self.user})
+                return tx_raw
+            except Exception as e:
+                logging.error(f"Failed building tx: {e}")
+                time.sleep(2)
+        else:
+            logging.error(f"Retries exceeded while building TX")
+            raise e
+
+    def _send_transaction(self, tx):
+        for i in range(4):
+            try:
+                tx_result = self.fb_bridge.send_transaction(tx, test=self.test)
+                return tx_result
+            except:
+                logging.error("Failed sending transaction to fireblocks")
+                time.sleep(2)
+        else:
+            raise ValueError(f"Failed sending transaction: {tx}")
+
+    def _check_transaction_retry(self, tx_id):
+        for attempt in range(2):
+            if self.fb_bridge.check_tx_is_completed(tx_id):
+                return True
+            else:
+                logging.error(f"Fireblocks reports transaction failed: {tx_id}")
+        else:
+            logging.error(
+                f"Retries exceeded while trying to send fireblocks transaction"
+            )
+
     def send_transaction_fireblocks(self, tx):
         logging.debug(f"simulating transaction")
         sim_res = tx.call({"from": self.user})
         logging.debug(f"result: {sim_res}")
         logging.debug("sending transaction")
         if self.send_tx:
-            for attempt in range(4):
-                # try to build transaction
-                try:
-                    tx_raw = tx.buildTransaction({"from": self.user})
-                    fb_bridge = self.get_fb_bridge()
-                # if fails, log error and sleep 5
-                except Exception as e:
-                    logging.info(f"Failed building tx: {e}")
-                    time.sleep(5)
-                # if succeeds, break loop to continue
-                else:
-                    break
-            # if loop ended without breaking, trigger error
-            else:
-                logging.info(f"Retries exceeded while building TX")
-                raise e
-
-            # To Do: handle errors and retry if needed
-            # Consider that transaction could be pending when retrying for errors, cannot blindly retry
-            try:
-                tx_result = fb_bridge.send_transaction(tx_raw, test=self.test)
-            except Exception as e:
-                logging.error(f"Failed sending fireblocks transaction")
-                logging.error(e)
-                raise ConnectionError()
-            for attempt in range(3):
-                try:
-                    return fb_bridge.check_tx_is_completed(tx_result["id"])
-                except Exception as e:
-                    logging.info(f"Failed getting tx status from fireblocks: {e}")
-            else:
-                logging.info(f"Retries exceeded while waiting fireblock transaction")
-                raise e
+            tx_raw = self._build_transaction(tx)
+            tx_result = self._send_transaction(tx_raw)
+            self._check_transaction_retry(tx_result["id"])
         else:
             return sim_res
 
