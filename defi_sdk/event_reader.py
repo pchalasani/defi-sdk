@@ -85,6 +85,14 @@ class EventReader:
         to_block,
         block_interval=10_000,
     ):
+        """
+        params:
+        event_abi_pairs: list of tuples (event name, case sensitive, event abi)
+        address_list: list of addresses to listen for events
+        from_block: block number to start listening from
+        to_block: block number to stop listening at
+        block_interval: parameter on how many blocks at once, affects only speed
+        """
         topic_dict = {}
         topic_list = []
         for i in event_abi_pairs:
