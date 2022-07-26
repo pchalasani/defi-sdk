@@ -4,6 +4,7 @@ import time
 import requests
 from web3 import Web3
 from web3.middleware import geth_poa_middleware
+from google.cloud import secretmanager
 import logging
 
 ETHERSCAN = "https://api.etherscan.io/api"
@@ -124,3 +125,10 @@ def get_token_price(address: str, chain: str):
     )
     logging.debug(r)
     return r.json()
+
+
+def get_google_secret(key_name):
+    client = secretmanager.SecretManagerServiceClient()
+    response = client.access_secret_version(request={"name": key_name})
+    key = response.payload.data.decode("UTF-8")
+    return key

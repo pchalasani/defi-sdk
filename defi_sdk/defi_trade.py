@@ -93,6 +93,7 @@ class DeFiTrade:
                 return True
             else:
                 logging.error(f"Fireblocks reports transaction failed: {tx_id}")
+                time.sleep(2)
         else:
             logging.error(
                 f"Retries exceeded while trying to send fireblocks transaction"
