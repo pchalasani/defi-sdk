@@ -137,14 +137,8 @@ class DeFiTrade:
                 )
 
     def get_current_balance(self, user, token):
-        for attempt in range(3):
-            contract = self.w3.eth.contract(
-                token, abi=read_abi(os.getenv("ERC20"), "token")
-            )
+        contract = self.w3.eth.contract(
+            token, abi=read_abi(os.getenv("ERC20"), "token")
+        )
 
-            balance = contract.functions.balanceOf(user).call()
-            if balance == 0:
-                time.sleep(2)
-            else:
-                return balance
-        return 0
+        return contract.functions.balanceOf(user).call()
