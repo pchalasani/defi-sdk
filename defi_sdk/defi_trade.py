@@ -150,3 +150,6 @@ class DeFiTrade:
                 return balance
             else:
                 time.sleep(2)
+        else:
+            logging.error(f"Found 0 balance for {token}")
+            return 0
