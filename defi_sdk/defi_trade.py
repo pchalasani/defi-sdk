@@ -142,3 +142,14 @@ class DeFiTrade:
         )
 
         return contract.functions.balanceOf(user).call()
+
+    def get_traded_balance(self, user, token):
+        for attempt in range(4):
+            balance = self.get_current_balance(user, token)
+            if balance > 0:
+                return balance
+            else:
+                time.sleep(2)
+        else:
+            logging.error(f"Found 0 balance for {token}")
+            return 0

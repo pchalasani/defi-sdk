@@ -12,6 +12,8 @@ from dotenv import load_dotenv
 from web3._utils.filters import construct_event_filter_params
 from web3._utils.events import get_event_data
 
+logging.basicConfig(level=logging.INFO)
+
 
 def parse_events(topic_dict, log):
     topic = log["topics"][0].hex()
@@ -28,27 +30,31 @@ def read_single_interval(filter, network, interval):
     filter["fromBlock"] = from_block
     filter["toBlock"] = to_block
     w3 = get_web3(network)
-    for i in range(3):
-        logs = w3.eth.get_logs(filter)
-        try:
-            logs = w3.eth.get_logs(filter)
-            break
-        except ValueError as e:
-            if e.args[0].get("code") == -32005:
-                mid = (from_block + to_block) / 2
-                log_start = read_single_interval(filter, network, (from_block, mid))
-                log_end = read_single_interval(filter, network, (mid + 1, to_block))
-                logs = log_start + log_end
+    try:
+        for i in range(3):
+            try:
+                logs = w3.eth.get_logs(filter)
                 break
-            else:
+            except ValueError as e:
+                if e.args[0].get("code") == -32605:
+                    logging.info("Splitting log...")
+                    mid = int((from_block + to_block) / 2)
+                    log_start = read_single_interval(filter, network, (from_block, mid))
+                    log_end = read_single_interval(filter, network, (mid + 1, to_block))
+                    logs = log_start + log_end
+                    break
+            except Exception as e:
+                logging.error(f"Exception in reading single interval: {interval}")
                 logging.error(e)
-        except Exception as e:
-            logging.error(e)
-    else:
-        logging.error("returned empty logs")
-        return []
+        else:
+            logging.error(f"returned empty logs: {interval}")
+            return []
 
-    logging.info(len(logs))
+    except Exception as e:
+        logging.error(f"failed to read interval: {interval}")
+        logging.error(e)
+        return []
+    logging.info(f"Finished interval with {len(logs)} logs")
     return logs
 
 
