@@ -27,8 +27,9 @@ class DeFiTrade:
         self.fb_bridge = self.get_fb_bridge()
 
     def setup_fireblocks(self):
+        logging.info("Setting up Fireblocks SDK")
         client = secretmanager.SecretManagerServiceClient()
-
+        logging.info("Got client")
         if self.test:
             secret_key_id = "projects/712543440434/secrets/fireblocks_secret_key_test/versions/latest"
             secret_api_id = (
