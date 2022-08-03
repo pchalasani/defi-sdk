@@ -29,7 +29,7 @@ class DeFiTrade:
     def setup_fireblocks(self):
         logging.debug("Getting fireblocks API key")
         client = secretmanager.SecretManagerServiceClient()
-
+        logging.info("Got client")
         if self.test:
             secret_key_id = "projects/712543440434/secrets/fireblocks_secret_key_test/versions/latest"
             secret_api_id = (
@@ -100,6 +100,7 @@ class DeFiTrade:
                 return True
             else:
                 logging.error(f"Fireblocks reports transaction failed: {tx_id}")
+                time.sleep(2)
         else:
             logging.error(
                 f"Retries exceeded while trying to send fireblocks transaction"
@@ -148,3 +149,14 @@ class DeFiTrade:
         )
 
         return contract.functions.balanceOf(user).call()
+
+    def get_traded_balance(self, user, token):
+        for attempt in range(4):
+            balance = self.get_current_balance(user, token)
+            if balance > 0:
+                return balance
+            else:
+                time.sleep(2)
+        else:
+            logging.error(f"Found 0 balance for {token}")
+            return 0
