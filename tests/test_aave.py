@@ -1,4 +1,5 @@
-from defi_sdk.integrations.aave_v3 import AaveTrade
+from defi_sdk.integrations.lending.aave_v3 import AaveV3
+from defi_sdk.defi_trade import DeFiTrade
 from tests.addresses import (
     FIREBLOCKS_VAULT,
     POLYGON_USDC,
@@ -9,34 +10,26 @@ from dotenv import load_dotenv
 load_dotenv(".env")
 
 
-def test_get_holdings_collateral():
+trade_polygon = DeFiTrade(
+    network="polygon",
+    user=FIREBLOCKS_VAULT,
+    test=False,
+    send_tx=False,
+)
 
-    aave = AaveTrade(
-        network="polygon",
-        user=FIREBLOCKS_VAULT,
-        test=False,
-        send_tx=False,
-    )
+aave = AaveV3(trade_polygon)
+
+
+def test_get_holdings_collateral():
     res = aave.update_holdings(asset=POLYGON_USDC)
     assert res["side"] == "collateral"
 
 
 def test_get_holdings_debt():
-    aave = AaveTrade(
-        network="polygon",
-        user=FIREBLOCKS_VAULT,
-        test=False,
-        send_tx=False,
-    )
+
     res = aave.update_holdings(asset=POLYGON_WETH)
     assert res["side"] == "borrow"
 
 
 def test_borrow_aave_not_send():
-    aave = AaveTrade(
-        network="polygon",
-        user=FIREBLOCKS_VAULT,
-        test=False,
-        send_tx=False,
-    )
-    aave.borrow_aave_v3(amount=100, asset=POLYGON_WETH)
+    aave.borrow(amount=100, asset=POLYGON_WETH)
