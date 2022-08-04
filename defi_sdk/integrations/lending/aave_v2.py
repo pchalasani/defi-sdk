@@ -3,30 +3,34 @@ import requests
 import os
 from defi_sdk.util import read_abi
 from defi_sdk.defi_trade import DeFiTrade
+from defi_sdk.integrations.lending.lending_generic import Lending
 
 
-class AaveTrade(DeFiTrade):
+class AaveV2(Lending):
     def __init__(
-        self, address_provider="0xa97684ead0e402dC232d5A977953DF7ECBaB3CDb", **kwargs
+        self,
+        defi_trade: DeFiTrade,
+        address_provider="0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5",
     ) -> None:
-        DeFiTrade.__init__(self, **kwargs)
-        provider_contract = self.w3.eth.contract(
-            self.w3.toChecksumAddress(address_provider),
-            abi=read_abi(filename="aave_addressprovider_v3", cloud=True),
+        super().__init__()
+        self.trade = defi_trade
+        provider_contract = self.trade.w3.eth.contract(
+            self.trade.w3.toChecksumAddress(address_provider),
+            abi=read_abi(address_provider, filename="aave_addressprovider_v2"),
         )
-        pool = provider_contract.functions.getPool().call()
-        self.aave_lending_pool_v3 = self.w3.eth.contract(
+        pool = provider_contract.functions.getLendingPool().call()
+        self.aave_lending_pool = self.trade.w3.eth.contract(
             pool,
-            abi=read_abi(filename="aave_pool_v3", cloud=True),
+            abi=read_abi(pool, filename="aave_pool_v3"),
         )
 
     def update_holdings(self, asset):
-        address = self.user.lower()
-        if self.network == "polygon":
+        address = self.trade.user.lower()
+        if self.trade.network == "polygon":
             url = "https://api.thegraph.com/subgraphs/name/aave/protocol-v3-polygon"
         else:
             raise ValueError(
-                f"Aave subgraph not defined for this network: {self.network}"
+                f"Aave subgraph not defined for this network: {self.trade.network}"
             )
         query = """
         query ($user: String!)
@@ -67,7 +71,7 @@ class AaveTrade(DeFiTrade):
         for i in r.json()["data"]["userReserves"]:
             if asset.lower() == i["reserve"]["underlyingAsset"]:
                 val = {
-                    "address": self.w3.toChecksumAddress(
+                    "address": self.trade.w3.toChecksumAddress(
                         i["reserve"]["underlyingAsset"]
                     ),
                     "name": i["reserve"]["name"],
@@ -76,36 +80,41 @@ class AaveTrade(DeFiTrade):
                 }
 
                 if int(i["currentStableDebt"]) != 0:
-                    cont = self.w3.eth.contract(
-                        self.w3.toChecksumAddress(i["reserve"]["sToken"]["id"]),
+                    cont = self.trade.w3.eth.contract(
+                        self.trade.w3.toChecksumAddress(i["reserve"]["sToken"]["id"]),
                         abi=read_abi(os.getenv("UNI-PAIR"), "pair"),
                     )
                     val["side"] = "borrow"
                 if int(i["currentVariableDebt"]) != 0:
-                    cont = self.w3.eth.contract(
-                        self.w3.toChecksumAddress(i["reserve"]["vToken"]["id"]),
+                    cont = self.trade.w3.eth.contract(
+                        self.trade.w3.toChecksumAddress(i["reserve"]["vToken"]["id"]),
                         abi=read_abi(os.getenv("UNI-PAIR"), "pair"),
                     )
                     val["side"] = "borrow"
                 if int(i["currentATokenBalance"]) != 0:
-                    cont = self.w3.eth.contract(
-                        self.w3.toChecksumAddress(i["reserve"]["aToken"]["id"]),
+                    cont = self.trade.w3.eth.contract(
+                        self.trade.w3.toChecksumAddress(i["reserve"]["aToken"]["id"]),
                         abi=read_abi(os.getenv("UNI-PAIR"), "pair"),
                     )
                     val["side"] = "collateral"
-                val["amount"] = cont.functions.balanceOf(self.user).call()
+                val["amount"] = cont.functions.balanceOf(self.trade.user).call()
                 return val
 
-    def borrow_aave_v3(self, amount: int, asset):
-        tx = self.aave_lending_pool_v3.functions.borrow(asset, amount, 2, 0, self.user)
-        self.send_transaction_fireblocks(tx)
-        if self.send_tx:
-            logging.info("Sent Aave v3 borrow transaction")
+    def borrow(self, amount: int, asset):
+        tx = self.aave_lending_pool_v3.functions.borrow(
+            asset, amount, 2, 0, self.trade.user
+        )
+        self.trade.send_transaction_fireblocks(tx)
+        if self.trade.send_tx:
+            logging.info("Sent Aave v2 borrow transaction")
         return True
 
-    def repay_aave_v3(self, amount: int, asset):
-        tx = self.aave_lending_pool_v3.functions.repay(asset, amount, 2, self.user)
-        self.send_transaction_fireblocks(tx)
-        if self.send_tx:
-            logging.info("Sent Aave v3 repay transaction")
+    def repay(self, amount: int, asset: str):
+        assert (
+            self.trade.get_traded_balance(self.trade.user, asset) >= amount
+        ), "Not enough balance to repay"
+        tx = self.aave_lending_pool.functions.repay(asset, amount, 2, self.trade.user)
+        self.trade.send_transaction_fireblocks(tx)
+        if self.trade.send_tx:
+            logging.info("Sent Aave v2 repay transaction")
         return True
