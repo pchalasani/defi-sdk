@@ -62,6 +62,11 @@ class DeFiTrade:
         elif network == "ropsten":
             chain = Chain.ROPSTEN
             vault_account_id = "1"
+        elif network == "mainnet":
+            chain = Chain.MAINNET
+            vault_account_id = "4"
+        else:
+            raise ValueError(f"Unknown network: {network}")
         logging.debug("Creating fireblocks bridge")
         fb_bridge = Web3Bridge(
             fb_api_client=self.fb,

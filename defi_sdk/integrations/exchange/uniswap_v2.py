@@ -2,24 +2,24 @@ import os
 import concurrent.futures
 import logging
 from datetime import datetime
-from pyrsistent import m
-
-
 from pytz import UTC
+
 from defi_sdk.util import read_abi, exec_concurrent
 from defi_sdk.defi_trade import DeFiTrade
+from defi_sdk.integrations.exchange.exchange_generic import Exchange
 
 
-class LPTrade(DeFiTrade):
+class UniswapV2(Exchange):
     def __init__(
         self,
+        defi_trade: DeFiTrade,
         lp_address: str,
         exchange: str,
         token_info: dict = {},
-        **kwargs,
     ) -> None:
-        DeFiTrade.__init__(self, **kwargs)
-        self.lp_contract = self.w3.eth.contract(
+        super().__init__()
+        self.trade: DeFiTrade = defi_trade
+        self.lp_contract = self.trade.w3.eth.contract(
             lp_address, abi=read_abi(os.getenv("UNI-PAIR"), "pair")
         )
         self.exchange = exchange
@@ -35,8 +35,8 @@ class LPTrade(DeFiTrade):
             "ropsten": {"uniswap": "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"},
         }
         router_abi = read_abi(os.getenv("UNI-ROUTER"), "router")
-        return self.w3.eth.contract(
-            routers[self.network][self.exchange], abi=router_abi
+        return self.trade.w3.eth.contract(
+            routers[self.trade.network][self.exchange], abi=router_abi
         )
 
     def get_token_info(self):
@@ -47,10 +47,10 @@ class LPTrade(DeFiTrade):
         with concurrent.futures.ThreadPoolExecutor(max_workers=len(func)) as pool:
             token_addresses = [x for x in pool.map(exec_concurrent, func)]
 
-        tok0 = self.w3.eth.contract(
+        tok0 = self.trade.w3.eth.contract(
             token_addresses[0], abi=read_abi(os.getenv("ERC20"), "token")
         )
-        tok1 = self.w3.eth.contract(
+        tok1 = self.trade.w3.eth.contract(
             token_addresses[1], abi=read_abi(os.getenv("ERC20"), "token")
         )
         func_token = [
@@ -72,9 +72,9 @@ class LPTrade(DeFiTrade):
         }
 
     def get_lp_amount(self):
-        return self.lp_contract.functions.balanceOf(self.user).call()
+        return self.lp_contract.functions.balanceOf(self.trade.user).call()
 
-    def get_lp_trade(self, lp_token_amount=False):
+    def get_trade(self, lp_token_amount=False):
         if not lp_token_amount:
             lp_token_amount = self.get_lp_amount()
 
@@ -102,22 +102,22 @@ class LPTrade(DeFiTrade):
     def get_quote(self, amount: int, path: list):
         return self.router.functions.getAmountsOut(amount, path).call()
 
-    def execute_conversion_in(
-        self, amount: int, path: list, max_slippage: float = 0.05
-    ):
-        expected_amount_out = self.get_quote(amount, path)[-1]
+    def swap(self, amount_in: int, path: list, max_slippage: float = 0.05):
+        expected_amount_out = self.get_quote(amount_in, path)[-1]
         logging.info(f"Expected out: {expected_amount_out}")
         min_amount_out = int(expected_amount_out * (1 - max_slippage))
         current_ts = int(datetime.timestamp(datetime.now(UTC)))
         lag = 10 * 60
 
-        self.ensure_approval(self.user, path[0], self.router.address, amount)
-        assert self.get_current_balance(self.user, path[0]) >= amount
-        swap_tx = self.router.functions.swapExactTokensForTokens(
-            amount, min_amount_out, path, self.user, current_ts + lag
+        self.trade.ensure_approval(
+            self.trade.user, path[0], self.router.address, amount_in
         )
-        self.send_transaction_fireblocks(swap_tx)
-        if self.send_tx:
+        assert self.trade.get_current_balance(self.trade.user, path[0]) >= amount_in
+        swap_tx = self.router.functions.swapExactTokensForTokens(
+            amount_in, min_amount_out, path, self.trade.user, current_ts + lag
+        )
+        self.trade.send_transaction_fireblocks(swap_tx)
+        if self.trade.send_tx:
             logging.info(f"Sent {self.exchange} convert amountIn transaction")
         return True
 
@@ -150,14 +150,14 @@ class LPTrade(DeFiTrade):
         token0_minimum = int(token0_liquidity * (1 - max_slippage))
         token1_minimum = int(token1_liquidity * (1 - max_slippage))
 
-        self.ensure_approval(
-            self.user,
+        self.trade.ensure_approval(
+            self.trade.user,
             self.token_info["token0"],
             self.router.address,
             token0_liquidity,
         )
-        self.ensure_approval(
-            self.user,
+        self.trade.ensure_approval(
+            self.trade.user,
             self.token_info["token1"],
             self.router.address,
             token1_liquidity,
@@ -170,13 +170,13 @@ class LPTrade(DeFiTrade):
             token1_liquidity,
             token0_minimum,
             token1_minimum,
-            self.user,
+            self.trade.user,
             current_ts + lag,
         )
-        self.send_transaction_fireblocks(
+        self.trade.send_transaction_fireblocks(
             tx,
         )
-        if self.send_tx:
+        if self.trade.send_tx:
             logging.info(f"Sent {self.exchange} add liquidity transaction")
         return True
 
@@ -187,8 +187,8 @@ class LPTrade(DeFiTrade):
             - quote_min: minimum amount of quote tokens to receive
             - base_min: minimum amount of base tokens to receive
         """
-        current_lp_balance = self.get_current_balance(
-            self.user, self.lp_contract.address
+        current_lp_balance = self.trade.get_traded_balance(
+            self.trade.user, self.lp_contract.address
         )
         assert (
             current_lp_balance >= lp_tokens,
@@ -210,8 +210,8 @@ class LPTrade(DeFiTrade):
         token0_minimum = int(share * reserve0 * (1 - max_slippage))
         token1_minimum = int(share * reserve1 * (1 - max_slippage))
 
-        self.ensure_approval(
-            self.user, self.lp_contract.address, self.router.address, lp_tokens
+        self.trade.ensure_approval(
+            self.trade.user, self.lp_contract.address, self.router.address, lp_tokens
         )
         tx = self.router.functions.removeLiquidity(
             self.token_info["token0"],
@@ -219,11 +219,11 @@ class LPTrade(DeFiTrade):
             lp_tokens,
             token0_minimum,
             token1_minimum,
-            self.user,
+            self.trade.user,
             current_ts + lag,
         )
 
-        self.send_transaction_fireblocks(tx)
-        if self.send_tx:
+        self.trade.send_transaction_fireblocks(tx)
+        if self.trade.send_tx:
             logging.info(f"Sent {self.exchange} remove liquidity transaction")
         return True
