@@ -27,7 +27,7 @@ class DeFiTrade:
         self.fb_bridge = self.get_fb_bridge()
 
     def setup_fireblocks(self):
-        logging.info("Setting up Fireblocks SDK")
+        logging.debug("Getting fireblocks API key")
         client = secretmanager.SecretManagerServiceClient()
         logging.info("Got client")
         if self.test:
@@ -48,9 +48,13 @@ class DeFiTrade:
 
         response = client.access_secret_version(request={"name": secret_api_id})
         fireblocks_api_key = response.payload.data.decode("UTF-8")
-        return FireblocksSDK(fireblocks_secret_key, fireblocks_api_key)
+        logging.debug("Got fireblocks API key")
+        sdk = FireblocksSDK(fireblocks_secret_key, fireblocks_api_key)
+        logging.debug("Got fireblocks API client")
+        return sdk
 
     def get_fb_bridge(self):
+        logging.debug("Getting fireblocks bridge")
         network = self.network
         if network == "polygon":
             chain = Chain.POLYGON
@@ -63,11 +67,13 @@ class DeFiTrade:
             vault_account_id = "4"
         else:
             raise ValueError(f"Unknown network: {network}")
+        logging.debug("Creating fireblocks bridge")
         fb_bridge = Web3Bridge(
             fb_api_client=self.fb,
             vault_account_id=vault_account_id,  # os.environ.get("FIREBLOCKS_SOURCE_VAULT_ACCOUNT"),
             chain=chain,
         )
+        logging.debug("Got fireblocks bridge")
         return fb_bridge
 
     def _build_transaction(self, tx):
