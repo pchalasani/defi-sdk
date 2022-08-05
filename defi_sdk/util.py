@@ -1,15 +1,18 @@
+import logging
 import os
 import json
+from enum import Enum
 import time
+
 import requests
 from web3 import Web3
 from web3.middleware import geth_poa_middleware
 from google.cloud import secretmanager
-import logging
+from google.cloud import storage
+from pdpyras import APISession, EventsAPISession
 
 ETHERSCAN = "https://api.etherscan.io/api"
 POLYGONSCAN = "https://api.polygonscan.com/api"
-from google.cloud import storage
 
 client = storage.Client()
 bucket = client.get_bucket("smart-contract-abis")
@@ -132,3 +135,74 @@ def get_google_secret(key_name):
     response = client.access_secret_version(request={"name": key_name})
     key = response.payload.data.decode("UTF-8")
     return key
+
+
+class Severity(Enum):
+    CRITICAL = "critical"
+    HIGH = "high"
+    INFO = "info"
+
+
+class Urgency(Enum):
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+
+def send_alert(
+    message: str,
+    title: str,
+    dedup_key: str,
+    severity: Severity,
+    urgency: Urgency,
+    responder: str = "PLVOEQQ",
+    service: str = "PLTLRSZ",
+):
+    key = os.getenv("pagerduty_key")
+    try:
+        with APISession(key) as session:
+            headers = {"From": "juuso@dkacapitalmanagement.com"}
+            payload = {
+                "incident_key": dedup_key,
+                "type": "incident",
+                "severity": severity.value,
+                "urgency": urgency.value,
+                "event_action": "trigger",
+                "title": title,
+                "service": {"id": service, "type": "service_reference"},
+                "assignments": [
+                    {"assignee": {"id": responder, "type": "user_reference"}}
+                ],
+                "body": {
+                    "type": "incident_body",
+                    "details": message,
+                },
+            }
+
+            pd_incident = session.rpost("incidents", json=payload, headers=headers)
+
+            logging.info(pd_incident)
+            return True
+    except Exception as e:
+        logging.debug(f"Error failed: {e}")
+        return False
+
+
+def resolve_alert(dedup_key: str):
+    key = os.getenv("pagerduty_key")
+    with APISession(key, default_from="juuso@dkacapitalmanagement.com") as session:
+        try:
+            res = session.list_all(
+                "incidents",
+                params={
+                    "statuses[]": ["triggered", "acknowledged"],
+                    "incident_key": dedup_key,
+                },
+            )
+
+            for i in res:
+                i["status"] = "resolved"
+                session.rput("incidents", json=[i])
+                logging.info(f"Resolved alert")
+        except:
+            logging.error("Failed to resolve alert")
