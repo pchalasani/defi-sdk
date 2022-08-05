@@ -1,10 +1,7 @@
-import os
-import concurrent.futures
 import logging
-from datetime import datetime
 from pytz import UTC
 
-from defi_sdk.util import read_abi, exec_concurrent
+from defi_sdk.util import read_abi
 from defi_sdk.defi_trade import DeFiTrade
 from defi_sdk.integrations.exchange.exchange_generic import Exchange
 

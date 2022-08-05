@@ -1,18 +1,10 @@
-from defi_sdk.util import get_web3, read_abi
-
-import os
-
-from defi_sdk.util import get_web3, read_abi
+import logging
 from functools import partial
 from multiprocessing import Pool
-import logging
 
-from dotenv import load_dotenv
-
+from defi_sdk.util import get_web3
 from web3._utils.filters import construct_event_filter_params
 from web3._utils.events import get_event_data
-
-logging.basicConfig(level=logging.INFO)
 
 
 def parse_events(topic_dict, log):
