@@ -1,7 +1,6 @@
 import logging
-import concurrent.futures
 
-from defi_sdk.util import read_abi, get_token_price, exec_concurrent
+from defi_sdk.util import read_abi
 from defi_sdk.integrations.staking.staking_generic import Staking
 from defi_sdk.defi_trade import DeFiTrade
 
