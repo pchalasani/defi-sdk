@@ -1,6 +1,6 @@
 import logging
 from dotenv import load_dotenv
-from defi_sdk.util import send_alert, find_alert, Severity, Urgency
+from defi_sdk.util import send_alert, resolve_alert, Severity, Urgency
 
 load_dotenv(".env")
 
@@ -17,4 +17,4 @@ def test_simple_alert(caplog):
 
 
 def test_find_alert():
-    find_alert("test_dedup_key_test")
+    resolve_alert("test_dedup_key_test")
