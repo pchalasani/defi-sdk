@@ -29,9 +29,12 @@ class Curve(Exchange):
         ), "Not enough tokens to execute curve swap"
         token_out = int(abs(token_in - 1))
         expected_amount = self.get_quote(amount, token_in, token_out)
-        minimum_amount = expected_amount * (1 - max_slippage)
+        minimum_amount = int(expected_amount * (1 - max_slippage))
+        self.trade.ensure_approval(
+            self.trade.user, token_in_address, self.lp_contract.address, minimum_amount
+        )
         tx = self.lp_contract.functions.exchange(
-            token_in, token_out, amount, minimum_amount
+            token_in, token_out, amount, minimum_amount, self.trade.user
         )
         self.trade.send_transaction_fireblocks(tx)
         if self.trade.send_tx:
