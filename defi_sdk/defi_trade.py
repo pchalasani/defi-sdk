@@ -16,7 +16,15 @@ class DeFiTrade:
         user: str,
         test: bool = False,
         send_tx: bool = False,
+        vault_account_id: int = 0,
     ):
+        if vault_account_id != 0:
+            self.vault_account_id = str(vault_account_id)
+        else:
+            if test:
+                self.vault_account_id = "1"
+            else:
+                self.vault_account_id = "4"
         self.network = network
         self.w3 = get_web3(network)
         self.user = user
@@ -58,19 +66,16 @@ class DeFiTrade:
         network = self.network
         if network == "polygon":
             chain = Chain.POLYGON
-            vault_account_id = "4"
         elif network == "ropsten":
             chain = Chain.ROPSTEN
-            vault_account_id = "1"
         elif network == "mainnet":
             chain = Chain.MAINNET
-            vault_account_id = "4"
         else:
             raise ValueError(f"Unknown network: {network}")
         logging.debug("Creating fireblocks bridge")
         fb_bridge = Web3Bridge(
             fb_api_client=self.fb,
-            vault_account_id=vault_account_id,  # os.environ.get("FIREBLOCKS_SOURCE_VAULT_ACCOUNT"),
+            vault_account_id=self.vault_account_id,
             chain=chain,
         )
         logging.debug("Got fireblocks bridge")
@@ -88,10 +93,12 @@ class DeFiTrade:
             logging.error(f"Retries exceeded while building TX")
             raise e
 
-    def _send_transaction(self, tx):
+    def _send_transaction(self, tx, approval_tx=False):
         for i in range(4):
             try:
-                tx_result = self.fb_bridge.send_transaction(tx, test=self.test)
+                tx_result = self.fb_bridge.send_transaction(
+                    tx, test=self.test, approval_tx=approval_tx
+                )
                 return tx_result
             except:
                 logging.error("Failed sending transaction to fireblocks")
@@ -111,23 +118,23 @@ class DeFiTrade:
                 f"Retries exceeded while trying to send fireblocks transaction"
             )
 
-    def send_transaction_fireblocks(self, tx):
+    def send_transaction_fireblocks(self, tx, approval_tx=False):
         logging.debug(f"simulating transaction")
         sim_res = tx.call({"from": self.user})
         logging.debug(f"result: {sim_res}")
         logging.debug("sending transaction")
         if self.send_tx:
             tx_raw = self._build_transaction(tx)
-            tx_result = self._send_transaction(tx_raw)
+            tx_result = self._send_transaction(tx_raw, approval_tx=approval_tx)
             self._check_transaction_retry(tx_result["id"])
         else:
             return sim_res
 
-    def ensure_approval(self, user, token, target, amount):
+    def ensure_approval(self, user, token, spender, amount):
         contract = self.w3.eth.contract(
             token, abi=(read_abi(os.getenv("ERC20"), "token"))
         )
-        allowance = contract.functions.allowance(user, target).call()
+        allowance = contract.functions.allowance(user, spender).call()
         logging.info(f"Current allowance: {allowance}, required allowance: {amount}")
         if allowance > amount:
             logging.info("Allowance OK")
@@ -136,16 +143,16 @@ class DeFiTrade:
             logging.info(f"Not enough allowance")
             if self.send_tx:
                 approval_tx = contract.functions.approve(
-                    target, int(amount) * pow(10, 5)
+                    spender, int(amount) * pow(10, 5)
                 )
                 logging.info(f"Sending approval transaction")
-                self.send_transaction_fireblocks(approval_tx)
+                self.send_transaction_fireblocks(approval_tx, approval_tx=True)
             else:
-                logging.error(f"Wallet: {user}")
-                logging.error(f"token: {token}")
-                logging.error(f"target: {target}")
+                logging.error(
+                    f"Wallet: {user}, token: {token}, spender: {spender}, amount: {amount}"
+                )
                 raise ValueError(
-                    f"Not Enough allowance for {user} to spend {token} at {target}"
+                    f"Not Enough allowance for {user} to spend {token} at {spender}"
                 )
 
     def get_current_balance(self, user, token):
