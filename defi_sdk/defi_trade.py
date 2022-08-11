@@ -146,7 +146,7 @@ class DeFiTrade:
                     spender, int(amount) * pow(10, 5)
                 )
                 logging.info(f"Sending approval transaction")
-                self.send_transaction_fireblocks(approval_tx, approval_tx=True)
+                self.send_transaction_fireblocks(approval_tx, approval_tx=spender)
             else:
                 logging.error(
                     f"Wallet: {user}, token: {token}, spender: {spender}, amount: {amount}"
