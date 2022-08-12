@@ -114,7 +114,7 @@ class AaveV2(Lending):
             self.trade.get_traded_balance(self.trade.user, asset) >= amount
         ), "Not enough balance to repay"
         self.trade.ensure_approval(
-            self.trade.user, asset, self.aave_lending_pool, amount
+            self.trade.user, asset, self.aave_lending_pool.address, amount
         )
         tx = self.aave_lending_pool.functions.repay(asset, amount, 2, self.trade.user)
         self.trade.send_transaction_fireblocks(tx)
