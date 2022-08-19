@@ -28,6 +28,13 @@ class AaveV3(Lending):
         address = self.trade.user.lower()
         if self.trade.network == "polygon":
             url = "https://api.thegraph.com/subgraphs/name/aave/protocol-v3-polygon"
+        elif self.trade.network == "arbitrum":
+            url = "https://api.thegraph.com/subgraphs/name/aave/protocol-v3-arbitrum"
+        elif self.trade.network == "optimism":
+            url = "https://api.thegraph.com/subgraphs/name/aave/protocol-v3-optimism"
+        elif self.trade.network == "avalanche":
+            url = "https://api.thegraph.com/subgraphs/name/aave/protocol-v3-avalanche"
+
         else:
             raise ValueError(
                 f"Aave subgraph not defined for this network: {self.trade.network}"
