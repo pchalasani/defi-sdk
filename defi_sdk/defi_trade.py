@@ -1,8 +1,9 @@
 import os
 import logging
 import time
-from fireblocks_defi_sdk_py.web3_bridge import Web3Bridge
-from fireblocks_defi_sdk_py.chain import Chain
+
+from defi_sdk.fireblocks_integration.web3_bridge import Web3Bridge
+from defi_sdk.fireblocks_integration.chain import Chain
 from fireblocks_sdk import FireblocksSDK
 from google.cloud import secretmanager
 
@@ -70,6 +71,12 @@ class DeFiTrade:
             chain = Chain.ROPSTEN
         elif network == "mainnet":
             chain = Chain.MAINNET
+        elif network == "arbitrum":
+            chain = Chain.ARBITRUM
+        elif network == "optimism":
+            chain = Chain.OPTIMISM
+        elif network == "avalanche":
+            chain = Chain.AVALANCHE
         else:
             raise ValueError(f"Unknown network: {network}")
         logging.debug("Creating fireblocks bridge")
@@ -114,8 +121,8 @@ class DeFiTrade:
                 logging.error(f"Fireblocks reports transaction failed: {tx_id}")
                 time.sleep(2)
         else:
-            logging.error(
-                f"Retries exceeded while trying to send fireblocks transaction"
+            raise ConnectionError(
+                "Fireblocks reports transaction failed, retries exceeded"
             )
 
     def send_transaction_fireblocks(self, tx, approval_tx=False):
