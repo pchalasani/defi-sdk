@@ -1,5 +1,7 @@
-fireblocks-defi-sdk-py @ git+https://github.com/dkacapitalmgnt/fireblocks-defi-sdk-py.git@main
 web3
 google-cloud-secret-manager
+google-cloud-storage
 python-dotenv
 pytz
+sentry-sdk
+fireblocks_sdk

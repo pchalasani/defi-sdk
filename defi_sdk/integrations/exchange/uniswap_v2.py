@@ -33,6 +33,7 @@ class UniswapV2(Exchange):
         routers = {
             "polygon": {"quickswap": "0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff"},
             "ropsten": {"uniswap": "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"},
+            "arbitrum": {"sushiswap": "0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506"},
         }
         router_abi = read_abi(os.getenv("UNI-ROUTER"), "router")
         return self.trade.w3.eth.contract(
