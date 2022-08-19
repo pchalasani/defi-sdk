@@ -23,7 +23,8 @@ dependencies = [
     "google-cloud-storage",
     "python-dotenv",
     "pytz",
-    
+    "sentry-sdk"
+
 ]
 
 [tool.setuptools.packages.find]
