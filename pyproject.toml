@@ -24,7 +24,8 @@ dependencies = [
     "python-dotenv",
     "pytz",
     "sentry-sdk",
-    "fireblocks_sdk"
+    "fireblocks_sdk",
+    "pdpyras"
 
 ]
 
