@@ -21,7 +21,6 @@ eth-keys==0.3.4
 eth-rlp==0.2.1
 eth-typing==2.3.0
 eth-utils==1.9.5
-fireblocks-defi-sdk-py @ git+https://github.com/dkacapitalmgnt/fireblocks-defi-sdk-py.git@main
 fireblocks-sdk==1.17.0
 frozenlist==1.3.0
 google-api-core==2.8.2
