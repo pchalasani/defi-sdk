@@ -45,8 +45,9 @@ def get_web3(network="mainnet") -> Web3:
             )
         )
     elif network == "avalanche":
-        return Web3(Web3.HTTPProvider("https://api.avax.network/ext/bc/C/rpc"))
-
+        w3 = Web3(Web3.HTTPProvider("https://api.avax.network/ext/bc/C/rpc"))
+        w3.middleware_onion.inject(geth_poa_middleware, layer=0)
+        return w3
     elif network == "ropsten":
         return Web3(
             Web3.HTTPProvider(f"https://ropsten.infura.io/v3/{os.getenv('infura')}")
