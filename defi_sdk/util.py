@@ -31,6 +31,22 @@ def get_web3(network="mainnet") -> Web3:
         )
         w3.middleware_onion.inject(geth_poa_middleware, layer=0)
         return w3
+
+    elif network == "arbitrum":
+        return Web3(
+            Web3.HTTPProvider(
+                f" https://arbitrum-mainnet.infura.io/v3/{os.getenv('infura')}"
+            )
+        )
+    elif network == "optimism":
+        return Web3(
+            Web3.HTTPProvider(
+                f"https://optimism-mainnet.infura.io/v3/{os.getenv('infura')}"
+            )
+        )
+    elif network == "avalanche":
+        pass
+
     elif network == "ropsten":
         return Web3(
             Web3.HTTPProvider(f"https://ropsten.infura.io/v3/{os.getenv('infura')}")
