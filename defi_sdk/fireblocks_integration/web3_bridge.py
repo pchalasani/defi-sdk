@@ -125,6 +125,7 @@ class Web3Bridge:
             receipt = self.web_provider.eth.wait_for_transaction_receipt(
                 tx_hash, timeout=240, poll_latency=1
             )
+            print(receipt)
         except Exception as e:
             logging.info("Failed getting the receipt")
             raise e
@@ -134,6 +135,17 @@ class Web3Bridge:
         else:
             time.sleep(10)
             return True
+
+    def get_fireblocks_transaction(self, fireblocks_id):
+        for i in range(3):
+            try:
+                tx = self.fb_api_client.get_transaction_by_id(fireblocks_id)
+                return tx
+            except Exception as e:
+                logging.info(f"Failed getting {fireblocks_id}, {e}")
+                time.sleep(5)
+        else:
+            raise ValueError(f"Failed getting {fireblocks_id}, ERROR: {e}")
 
     def check_tx_is_completed(self, tx_id) -> dict:
         """
@@ -147,63 +159,53 @@ class Web3Bridge:
         previous_status = False
 
         while True:
-            try:
-                current_status = self.fb_api_client.get_transaction_by_id(tx_id)
-            except Exception as e:
-                logging.info(f"Error while getting FB transaction status: {e}")
-                time.sleep(3)
-                timeout += 3
-                continue
-            timeout += 1
+            fireblocks_transaction = self.get_fireblocks_transaction(tx_id)
+            current_status = fireblocks_transaction[STATUS_KEY]
+            if "txHash" in fireblocks_transaction:
+                transaction_hash = fireblocks_transaction["txHash"]
+                try:
+                    return self.check_tx_status_chain(transaction_hash)
+                except Exception as e:
+                    logging.info(f"Exception while getting transaction status: {e}")
 
             # Logging if status has changed
-            if current_status[STATUS_KEY] != previous_status:
-                previous_status = current_status[STATUS_KEY]
-                logging.info(f"Pending fireblocks: {previous_status}")
+            if current_status != previous_status:
+                previous_status = current_status
+                logging.info(f"Current Fireblocks status: {current_status}")
 
             # Transaction seemed to have failed
-            # TODO: This assumes transaction is not sent, is there a case where it looks failed but is not
-            if current_status[STATUS_KEY] in FAILED_STATUS:
-                logging.error(f"Fireblocks failed transaction: {current_status}")
+            # TODO: This assumes transaction is not sent, could be true
+            if current_status in FAILED_STATUS:
+                logging.error(
+                    f"Fireblocks reports transaction failed: {current_status} because {fireblocks_transaction['subStatus']}"
+                )
                 return False
 
             # Fireblocks confirms that tx is finished
-            if current_status[STATUS_KEY] == TRANSACTION_STATUS_COMPLETED:
+            if current_status == TRANSACTION_STATUS_COMPLETED:
+                logging.info(f"Fireblocks reports transaction completed")
                 # We want to still confirm state from chain
-                transaction_hash = current_status["txHash"]
-                return self.check_tx_status_chain(transaction_hash)
+                transaction_hash = fireblocks_transaction["txHash"]
+                chain_status = self.check_tx_status_chain(transaction_hash)
+                logging.info(f"Chain status: {chain_status}")
+                return chain_status
 
             # timeout while not yet confirmed or failed
             if timeout > SUBMIT_TIMEOUT:
+                logging.info(f"Timeout reached")
                 # If we have tx hash, confirm from blockchain if accepted or failed
                 if transaction_hash:
-                    try:
-                        if self.check_tx_status_chain(transaction_hash):
-                            return True
-                    except:
-                        pass
+                    chain_status = self.check_tx_status_chain(transaction_hash)
+                    logging.info(f"Chain status: {chain_status}")
+                    if chain_status:
+                        return True
                 # Cancel tx, caller should resend
                 logging.error(
-                    "Timeout while waiting for Fireblocks to confirm transaction"
+                    "Timeout while waiting for Fireblocks to confirm transaction, no hash available"
                 )
                 self.fb_api_client.cancel_transaction_by_id(tx_id)
                 return False
 
-            # See if fireblocks provides tx hash at this point
-            if (
-                current_status[STATUS_KEY] in PENDING_STATUS_TX_HASH
-                and not transaction_hash
-            ):
-                if "txHash" in current_status:
-                    transaction_hash = current_status["txHash"]
-
-            # Follow the transaction hash on-chain
-            if transaction_hash:
-                try:
-                    return self.check_tx_status_chain(transaction_hash)
-                except:
-                    # likely timed out, increase timeout
-                    timeout += 120
-
             logging.debug(current_status)
-            time.sleep(1)
+            time.sleep(5)
+            timeout += 5
