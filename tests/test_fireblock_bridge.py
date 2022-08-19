@@ -11,6 +11,15 @@ test_trade = DeFiTrade(
 
 bridge = test_trade.fb_bridge
 
+test_trade_polygon = DeFiTrade(
+    network="polygon",
+    user="0xa1BF30455Dc68807711612CD167450fCD0fde502",
+    test=False,
+    send_tx=False,
+)
+
+bridge_polygon = test_trade_polygon.fb_bridge
+
 
 def test_whitelisting_success():
     whitelisted = "0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7"
@@ -42,3 +51,15 @@ def test_fireblocks_completed_tx():
 def test_fireblocks_cancelled():
     fireblocks_id = "b3ec88cb-1151-47f0-8fcc-592c4d7275bf"
     assert bridge.check_tx_is_completed(fireblocks_id) == False
+
+
+failed_transaction_hash = (
+    "0x0fca503da2ae2393d95fb5f3202e2298b3664f0ba851cfb6d3596346b240f37a"
+)
+
+
+def test_failed_transaction_fireblocks():
+    fb_id = "af888954-2736-4b7f-9ff0-fe6c98b63b7c"
+    res = bridge_polygon.get_fireblocks_transaction(fb_id)
+    print(res["txHash"])
+    assert bridge_polygon.check_tx_status_chain(res["txHash"]) == False
