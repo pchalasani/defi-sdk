@@ -45,12 +45,15 @@ def get_web3(network="mainnet") -> Web3:
             )
         )
     elif network == "avalanche":
-        pass
+        return Web3(Web3.HTTPProvider("https://api.avax.network/ext/bc/C/rpc"))
 
     elif network == "ropsten":
         return Web3(
             Web3.HTTPProvider(f"https://ropsten.infura.io/v3/{os.getenv('infura')}")
         )
+
+    else:
+        raise ValueError(f"Network {network} not supported")
 
 
 abi_dict = {}
