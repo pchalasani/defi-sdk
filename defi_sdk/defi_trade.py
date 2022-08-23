@@ -96,9 +96,10 @@ class DeFiTrade:
             except Exception as e:
                 logging.error(f"Failed building tx: {e}")
                 time.sleep(2)
+                build_error = e
         else:
             logging.error(f"Retries exceeded while building TX")
-            raise e
+            raise build_error
 
     def _send_transaction(self, tx):
         for i in range(4):
