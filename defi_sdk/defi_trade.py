@@ -100,15 +100,13 @@ class DeFiTrade:
             logging.error(f"Retries exceeded while building TX")
             raise e
 
-    def _send_transaction(self, tx, approval_tx=False):
+    def _send_transaction(self, tx):
         for i in range(4):
             try:
-                tx_result = self.fb_bridge.send_transaction(
-                    tx, test=self.test, approval_tx=approval_tx
-                )
+                tx_result = self.fb_bridge.send_transaction(tx, test=self.test)
                 return tx_result
-            except:
-                logging.error("Failed sending transaction to fireblocks")
+            except Exception as e:
+                logging.error(f"Failed sending transaction to fireblocks: {e}")
                 time.sleep(2)
         else:
             raise ValueError(f"Failed sending transaction: {tx}")
@@ -125,14 +123,14 @@ class DeFiTrade:
                 "Fireblocks reports transaction failed, retries exceeded"
             )
 
-    def send_transaction_fireblocks(self, tx, approval_tx=False):
-        logging.debug(f"simulating transaction")
+    def send_transaction_fireblocks(self, tx):
+        logging.debug(f"TRANSACTION: {tx}")
         sim_res = tx.call({"from": self.user})
         logging.debug(f"result: {sim_res}")
-        logging.debug("sending transaction")
         if self.send_tx:
             tx_raw = self._build_transaction(tx)
-            tx_result = self._send_transaction(tx_raw, approval_tx=approval_tx)
+            logging.debug(f"TRANSACTION PARAMETERS: {tx_raw}")
+            tx_result = self._send_transaction(tx_raw)
             self._check_transaction_retry(tx_result["id"])
         else:
             return sim_res
@@ -153,7 +151,7 @@ class DeFiTrade:
                     spender, int(amount) * pow(10, 5)
                 )
                 logging.info(f"Sending approval transaction")
-                self.send_transaction_fireblocks(approval_tx, approval_tx=spender)
+                self.send_transaction_fireblocks(approval_tx)
             else:
                 logging.error(
                     f"Wallet: {user}, token: {token}, spender: {spender}, amount: {amount}"

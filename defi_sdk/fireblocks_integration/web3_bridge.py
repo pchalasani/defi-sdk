@@ -60,7 +60,6 @@ class Web3Bridge:
         destination = None
         whitelisted_addresses = self.fb_api_client.get_external_wallets()
         target = target_address.lower()
-
         for address in whitelisted_addresses:
             for token in address["assets"]:
                 if token["address"].lower() == target:
@@ -68,8 +67,8 @@ class Web3Bridge:
                     whitelist_address == True
                     if self.asset == token["id"]:
                         logging.debug(f"found correct asset for whitelisted address")
-                        destination = TransferPeerPath(EXTERNAL_WALLET, address["id"])
-                        return destination
+                        return TransferPeerPath(EXTERNAL_WALLET, address["id"])
+
         if not destination:
             if whitelist_address:
                 raise ValueError(
@@ -80,9 +79,7 @@ class Web3Bridge:
                     f"Address not whitelisted, address: {target}, asset: {self.asset}"
                 )
 
-    def send_transaction(
-        self, transaction: dict, note="", test=False, approval_tx=False
-    ) -> dict:
+    def send_transaction(self, transaction: dict, note="", test=False) -> dict:
         """
         Takes a ready transaction after being built (using web3 buildTransaction()) and transmits it to Fireblocks.
         :param transaction: A transaction object (dict) to submit to the blockchain.
@@ -90,14 +87,12 @@ class Web3Bridge:
         :return:
         """
         if not test:
-            if not approval_tx:
-                destination = self.check_whitelisting(transaction["to"])
-            else:
-                destination = self.check_whitelisting(approval_tx)
+            destination = self.check_whitelisting(transaction["to"])
         else:
             destination = DestinationTransferPeerPath(
                 ONE_TIME_ADDRESS, one_time_address={"address": transaction["to"]}
             )
+        logging.debug(f"TX DESTINATION: {destination}")
 
         return self.fb_api_client.create_transaction(
             tx_type="CONTRACT_CALL",
@@ -123,7 +118,7 @@ class Web3Bridge:
         logging.info("Checking on-chain status")
         try:
             receipt = self.web_provider.eth.wait_for_transaction_receipt(
-                tx_hash, timeout=240, poll_latency=1
+                tx_hash, timeout=240, poll_latency=3
             )
             print(receipt)
         except Exception as e:
@@ -161,13 +156,6 @@ class Web3Bridge:
         while True:
             fireblocks_transaction = self.get_fireblocks_transaction(tx_id)
             current_status = fireblocks_transaction[STATUS_KEY]
-            if "txHash" in fireblocks_transaction:
-                transaction_hash = fireblocks_transaction["txHash"]
-                try:
-                    return self.check_tx_status_chain(transaction_hash)
-                except Exception as e:
-                    logging.info(f"Exception while getting transaction status: {e}")
-
             # Logging if status has changed
             if current_status != previous_status:
                 previous_status = current_status
@@ -205,6 +193,13 @@ class Web3Bridge:
                 )
                 self.fb_api_client.cancel_transaction_by_id(tx_id)
                 return False
+
+            if "txHash" in fireblocks_transaction:
+                transaction_hash = fireblocks_transaction["txHash"]
+                try:
+                    return self.check_tx_status_chain(transaction_hash)
+                except Exception as e:
+                    logging.info(f"Exception while getting transaction status: {e}")
 
             logging.debug(current_status)
             time.sleep(5)
