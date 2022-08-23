@@ -120,7 +120,6 @@ class Web3Bridge:
             receipt = self.web_provider.eth.wait_for_transaction_receipt(
                 tx_hash, timeout=240, poll_latency=3
             )
-            print(receipt)
         except Exception as e:
             logging.info("Failed getting the receipt")
             raise e
