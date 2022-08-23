@@ -1,3 +1,4 @@
+import logging
 import pytest
 from defi_sdk.fireblocks_integration.web3_bridge import Web3Bridge, TransferPeerPath
 from defi_sdk.defi_trade import DeFiTrade
@@ -19,6 +20,15 @@ test_trade_polygon = DeFiTrade(
 )
 
 bridge_polygon = test_trade_polygon.fb_bridge
+
+
+test_trade_avax = DeFiTrade(
+    network="avalanche",
+    user="0xa1BF30455Dc68807711612CD167450fCD0fde502",
+    test=False,
+    send_tx=False,
+)
+bridge_avax = test_trade_avax.fb_bridge
 
 
 def test_whitelisting_success():
@@ -58,8 +68,40 @@ failed_transaction_hash = (
 )
 
 
-def test_failed_transaction_fireblocks():
-    fb_id = "af888954-2736-4b7f-9ff0-fe6c98b63b7c"
-    res = bridge_polygon.get_fireblocks_transaction(fb_id)
-    print(res["txHash"])
-    assert bridge_polygon.check_tx_status_chain(res["txHash"]) == False
+# def test_failed_transaction_fireblocks():
+#     fb_id = "af888954-2736-4b7f-9ff0-fe6c98b63b7c"
+#     res = bridge_polygon.get_fireblocks_transaction(fb_id)
+#     print(res["txHash"])
+#     assert bridge_polygon.check_tx_status_chain(res["txHash"]) == False
+
+
+# success_ui = "e2709c61-9950-4d98-902d-4c99aae7d3d5"
+# failed_ui = "4911e433-7b69-47c4-9510-2840f0b59d90"
+# failed_target_approval_target = "ea78af8c-f286-44e4-a44d-2bd36f8408e6"
+# failed_target_token = "31af87fc-2af1-491e-b611-f921d58bb3de"
+# pending = "4fbdb452-e14c-4838-afce-9058cebb0aa3"
+
+
+# def test_failed_2():
+#     for i in [
+#         success_ui,
+#         failed_ui,
+#         failed_target_approval_target,
+#         failed_target_token,
+#         pending,
+#     ]:
+#         res = bridge_avax.get_fireblocks_transaction(i)
+#         print(i)
+#         print(res)
+
+
+# def test_build_approve_transaction(caplog):
+#     caplog.set_level(logging.DEBUG)
+#     trade = DeFiTrade(
+#         network="avalanche",
+#         user="0xa1BF30455Dc68807711612CD167450fCD0fde502",
+#         test=False,
+#         send_tx=True,
+#     )
+#     joe_lp = "0xf4003F4efBE8691B60249E6afbD307aBE7758adb"
+#     joe_router = "0x60aE616a2155Ee3d9A68541Ba4544862310933d4"
