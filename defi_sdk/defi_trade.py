@@ -91,7 +91,23 @@ class DeFiTrade:
     def _build_transaction(self, tx):
         for attempt in range(4):
             try:
-                tx_raw = tx.build_transaction({"from": self.user})
+                # arbitrum does not have w3.eth.fee_history available, need to get gas manually
+                # must pass maxFeePerGas and maxPriorityFeePerGas
+                if self.network == "arbitrum":
+                    # maximum amount you’re willing to pay
+                    max_fee = int(self.w3.eth.gas_price * 1.2)
+                    # part of the fee that goes to the miner
+                    max_priority_fee = int(max_fee * 0.05)
+                    tx_raw = tx.build_transaction(
+                        {
+                            "from": self.user,
+                            "maxFeePerGas": max_fee,
+                            "maxPriorityFeePerGas": max_priority_fee,
+                        }
+                    )
+
+                else:
+                    tx_raw = tx.build_transaction({"from": self.user})
                 return tx_raw
             except Exception as e:
                 logging.error(f"Failed building tx: {e}")
