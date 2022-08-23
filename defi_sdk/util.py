@@ -35,7 +35,7 @@ def get_web3(network="mainnet") -> Web3:
     elif network == "arbitrum":
         return Web3(
             Web3.HTTPProvider(
-                f" https://arbitrum-mainnet.infura.io/v3/{os.getenv('infura')}"
+                f"https://arbitrum-mainnet.infura.io/v3/{os.getenv('infura')}"
             )
         )
     elif network == "optimism":
