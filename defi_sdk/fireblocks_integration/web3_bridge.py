@@ -118,17 +118,25 @@ class Web3Bridge:
         logging.info("Checking on-chain status")
         try:
             receipt = self.web_provider.eth.wait_for_transaction_receipt(
-                tx_hash, timeout=240, poll_latency=3
+                tx_hash, timeout=3, poll_latency=1
             )
         except Exception as e:
             logging.info("Failed getting the receipt")
-            raise e
-        if receipt["status"] == 0:
-            logging.info("Transaction failed on chain")
             return False
+
+        if "status" in receipt:
+            if receipt["status"] == 0:
+                logging.error("Transaction failed on chain")
+                return False
+            else:
+                time.sleep(3)
+                logging.info("Found succesful transaction on chain")
+                return True
         else:
-            time.sleep(10)
-            return True
+            logging.error(
+                f"Transaction did not have a status: HASH: {tx_hash}, receipt: {receipt}"
+            )
+            return False
 
     def get_fireblocks_transaction(self, fireblocks_id):
         for i in range(3):
@@ -143,10 +151,7 @@ class Web3Bridge:
 
     def check_tx_is_completed(self, tx_id) -> dict:
         """
-        This function waits for SUBMIT_TIMEOUT*4 (180 by default) seconds to retrieve status of the transaction sent to
-        Fireblocks. Will stop upon completion / failure.
-        :param tx_id: Transaction ID from FBKS.
-        :return: Transaction last status after timeout / completion.
+        Check status of a transaction either from chain or Fireblocks, whichever is first to confirm
         """
         timeout = 0
         transaction_hash = False
@@ -171,35 +176,28 @@ class Web3Bridge:
             # Fireblocks confirms that tx is finished
             if current_status == TRANSACTION_STATUS_COMPLETED:
                 logging.info(f"Fireblocks reports transaction completed")
-                # We want to still confirm state from chain
+                # TODO: Naively assuming transaction is finished, should check
+                return True
+
+            if "txHash" in fireblocks_transaction:
                 transaction_hash = fireblocks_transaction["txHash"]
                 chain_status = self.check_tx_status_chain(transaction_hash)
-                logging.info(f"Chain status: {chain_status}")
-                return chain_status
+                # Transaction finished on chain, return True
+                if chain_status:
+                    return True
+                else:
+                    # Not finished on chain or errored while searching
+                    # Try again and confirm, if no on-chain or fireblocks confirmation, timeout and cancel
+                    pass
 
             # timeout while not yet confirmed or failed
             if timeout > SUBMIT_TIMEOUT:
                 logging.info(f"Timeout reached")
-                # If we have tx hash, confirm from blockchain if accepted or failed
-                if transaction_hash:
-                    chain_status = self.check_tx_status_chain(transaction_hash)
-                    logging.info(f"Chain status: {chain_status}")
-                    if chain_status:
-                        return True
                 # Cancel tx, caller should resend
-                logging.error(
-                    "Timeout while waiting for Fireblocks to confirm transaction, no hash available"
-                )
+                logging.error("Timeout while waiting for confirmation")
                 self.fb_api_client.cancel_transaction_by_id(tx_id)
                 return False
 
-            if "txHash" in fireblocks_transaction:
-                transaction_hash = fireblocks_transaction["txHash"]
-                try:
-                    return self.check_tx_status_chain(transaction_hash)
-                except Exception as e:
-                    logging.info(f"Exception while getting transaction status: {e}")
-
-            logging.debug(current_status)
+            logging.debug(f"STATUS: {current_status}")
             time.sleep(5)
             timeout += 5
