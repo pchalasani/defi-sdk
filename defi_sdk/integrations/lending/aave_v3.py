@@ -117,6 +117,9 @@ class AaveV3(Lending):
         return True
 
     def repay(self, amount: int, asset):
+        self.trade.ensure_approval(
+            self.trade.user, asset, self.aave_lending_pool_v3.address, amount
+        )
         tx = self.aave_lending_pool_v3.functions.repay(
             asset, amount, 2, self.trade.user
         )
