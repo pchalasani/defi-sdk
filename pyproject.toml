@@ -35,3 +35,6 @@ exclude=['abi']
 [project.urls]
 "Homepage" = "https://github.com/pypa/sampleproject"
 "Bug Tracker" = "https://github.com/pypa/sampleproject/issues"
+
+[tool.pytest.ini_options]
+log_cli = "true"
