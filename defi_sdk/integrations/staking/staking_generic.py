@@ -10,3 +10,6 @@ class Staking:
 
     def get_rewards(self):
         raise NotImplementedError("get_rewards() not implemented")
+
+    def get_staked_balance(self):
+        raise NotImplementedError("get_staked_balance() not implemented")
