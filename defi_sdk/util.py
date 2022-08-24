@@ -75,7 +75,7 @@ def read_abi(address: str = "", filename="", network="mainnet", cloud=False) -> 
             logging.info(f"{filename} not found on Cloud storage")
             abi = get_abi_etherscan(address, network=network)
     else:
-        if filename:
+        if filename != "":
             file_path = os.path.join(os.getcwd(), "abi", f"{filename}.json")
             if os.path.exists(file_path):
                 with open(file_path) as f:
@@ -86,7 +86,8 @@ def read_abi(address: str = "", filename="", network="mainnet", cloud=False) -> 
                 abi = get_abi_etherscan(address, network=network)
                 with open(file_path, "w") as f:
                     f.write(abi)
-
+        else:
+            abi = get_abi_etherscan(address, network=network)
     abi_dict[filename] = abi
     return abi
 
