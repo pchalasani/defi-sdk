@@ -21,7 +21,7 @@ from fireblocks_sdk import (
 )
 from defi_sdk.fireblocks_integration.chain import Chain, CHAIN_TO_ASSET_ID
 
-SUBMIT_TIMEOUT = 180
+SUBMIT_TIMEOUT = 270
 STATUS_KEY = "status"
 
 FAILED_STATUS = [
