@@ -142,7 +142,10 @@ class DeFiTrade:
 
     def send_transaction_fireblocks(self, tx):
         logging.debug(f"TRANSACTION: {tx}")
-        sim_res = tx.call({"from": self.user})
+        try:
+            sim_res = tx.call({"from": self.user})
+        except Exception as e:
+            raise ValueError(f"Failed simulation of {tx} with message {e}")
         logging.debug(f"result: {sim_res}")
         if self.send_tx:
             tx_raw = self._build_transaction(tx)
