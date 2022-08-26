@@ -194,9 +194,27 @@ class Web3Bridge:
             if timeout > SUBMIT_TIMEOUT:
                 logging.info(f"Timeout reached")
                 # Cancel tx, caller should resend
-                logging.error("Timeout while waiting for confirmation")
-                self.fb_api_client.cancel_transaction_by_id(tx_id)
-                return False
+                logging.info(
+                    "Timeout while waiting for confirmation, cancelling transaction"
+                )
+                for i in range(4):
+                    try:
+                        self.fb_api_client.cancel_transaction_by_id(tx_id)
+                        return False
+                    except Exception as e:
+                        logging.info(f"TIMEOUT: Failed cancelling transaction: {e}")
+                        fireblocks_transaction = self.get_fireblocks_transaction(tx_id)
+                        current_status = fireblocks_transaction[STATUS_KEY]
+                        if current_status in FAILED_STATUS:
+                            return False
+                        elif current_status in TRANSACTION_STATUS_COMPLETED:
+                            return True
+                        else:
+                            time.sleep(2)
+                else:
+                    raise ValueError(
+                        f"Transaction not completed and unable to cancel. current status: {current_status}"
+                    )
 
             logging.debug(f"STATUS: {current_status}")
             time.sleep(5)
