@@ -82,6 +82,7 @@ class EventReader:
         from_block,
         to_block,
         block_interval=10_000,
+        event_filter: list = [],
     ):
         """
         params:
@@ -110,6 +111,10 @@ class EventReader:
             "address": address_list,
             "topics": [topic_list],
         }
+
+        if event_filter != []:
+            for i in event_filter:
+                topic_list.append(i)
 
         with Pool(self.threads) as p:
             log_lists = p.map(
