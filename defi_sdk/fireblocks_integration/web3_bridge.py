@@ -144,12 +144,44 @@ class Web3Bridge:
                 tx = self.fb_api_client.get_transaction_by_id(fireblocks_id)
                 return tx
             except Exception as e:
+                latest_error = e
                 logging.info(f"Failed getting {fireblocks_id}, {e}")
                 time.sleep(5)
         else:
-            raise ValueError(f"Failed getting {fireblocks_id}, ERROR: {e}")
+            raise ValueError(f"Failed getting {fireblocks_id}, ERROR: {latest_error}")
 
-    def check_tx_is_completed(self, tx_id) -> dict:
+    def check_tx_is_completed(self, tx_id):
+        timeout = 0
+        previous_status = False
+        self.fb_api_client.set_confirmation_threshold_for_txid(tx_id, 1)
+        while True:
+            fireblocks_transaction = self.get_fireblocks_transaction(tx_id)
+            current_status = fireblocks_transaction[STATUS_KEY]
+            # Logging if status has changed
+            if current_status != previous_status:
+                previous_status = current_status
+                logging.info(f"Current Fireblocks status: {current_status}")
+            if current_status in FAILED_STATUS:
+                logging.error(
+                    f"Fireblocks reports transaction failed: {current_status} because {fireblocks_transaction['subStatus']}"
+                )
+                return False
+
+            # Fireblocks confirms that tx is finished
+            elif current_status == TRANSACTION_STATUS_COMPLETED:
+                logging.info(f"Fireblocks reports transaction completed")
+                # TODO: Naively assuming transaction is finished, should check
+                return True
+            if timeout > SUBMIT_TIMEOUT:
+                logging.info(f"Timeout reached")
+                # Cancel tx, caller should resend
+                logging.info(
+                    "Timeout while waiting for confirmation, cancelling transaction"
+                )
+                self.fb_api_client.cancel_transaction_by_id(tx_id)
+                return False
+
+    def check_tx_is_completed_old(self, tx_id):
         """
         Check status of a transaction either from chain or Fireblocks, whichever is first to confirm
         """
