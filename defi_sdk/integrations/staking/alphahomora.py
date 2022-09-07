@@ -54,7 +54,10 @@ class AlphaHomoraStaking(Staking):
                     self.trade.w3.toChecksumAddress(staking_address),
                     abi=read_abi(filename="homorastaking"),
                 )
-
+            else:
+                raise ValueError(
+                    f"Exchange {exchange} of type {type(exchange)} not supported"
+                )
             self.position_id = self.get_position_id()
             self.pool_id, _ = self.decode_collid(self.position_id)
         else:
