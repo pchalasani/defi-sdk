@@ -35,44 +35,35 @@ def test_get_pool_id():
     assert stake.pool_id == 0
 
 
-def test_calculate_adjustment_positive_exposure_too_little_leverage():
+def test_calculate_adjustment_decrease_leverage(caplog):
+    caplog.set_level(logging.DEBUG)
     adjustment = stake.calculate_adjustment(
-        lp_quote=200, lp_base=10, borrow_quote=0, borrow_base=9, target_leverage=3
+        lp_quote=500,
+        lp_base=10,
+        borrow_quote=250,
+        borrow_base=10,
+        target_leverage=2,
     )
-    assert adjustment["borrow_quote"] == 100
-    assert adjustment["borrow_base"] == 6
-    assert adjustment["lp_quote"] == 100
-    assert adjustment["lp_base"] == 5
-
-
-def test_calculate_adjustment_negative_exposure_too_little_leverage():
-    adjustment = stake.calculate_adjustment(
-        lp_quote=200, lp_base=10, borrow_quote=0, borrow_base=11, target_leverage=3
-    )
-    assert adjustment["borrow_quote"] == 100
-    assert adjustment["borrow_base"] == 4
-    assert adjustment["lp_quote"] == 100
-    assert adjustment["lp_base"] == 5
-
-
-def test_calculate_adjustment_negative_exposure_too_much_leverage():
-    adjustment = stake.calculate_adjustment(
-        lp_quote=400, lp_base=20, borrow_quote=200, borrow_base=22, target_leverage=3
-    )
-    assert adjustment["borrow_quote"] == -100
-    assert adjustment["borrow_base"] == -7
-    assert adjustment["lp_quote"] == -100
+    print("Adjustment", adjustment)
+    assert adjustment["borrow_quote"] == -250
+    assert adjustment["borrow_base"] == -5
+    assert adjustment["lp_quote"] == -250
     assert adjustment["lp_base"] == -5
 
 
-def test_calculate_adjustment_positive_exposure_too_much_leverage():
+def test_calculate_adjustment_increase_leverage():
     adjustment = stake.calculate_adjustment(
-        lp_quote=400, lp_base=20, borrow_quote=200, borrow_base=18, target_leverage=3
+        lp_quote=500,
+        lp_base=10,
+        borrow_quote=0,
+        borrow_base=5,
+        target_leverage=3,
     )
-    assert adjustment["borrow_quote"] == -100
-    assert adjustment["borrow_base"] == -3
-    assert adjustment["lp_quote"] == -100
-    assert adjustment["lp_base"] == -5
+    print("Adjustment", adjustment)
+    assert adjustment["borrow_quote"] == 375
+    assert adjustment["borrow_base"] == 17.5
+    assert adjustment["lp_quote"] == 625
+    assert adjustment["lp_base"] == 12.5
 
 
 def test_calculate_adjustment_live():
@@ -83,7 +74,7 @@ def test_calculate_adjustment_live():
         lp_base=res["token0"],
         borrow_quote=res["token1_borrow"],
         borrow_base=res["token0_borrow"],
-        target_leverage=3,
+        target_leverage=2.7,
     )
     print(
         adjustment["borrow_quote"] / pow(10, 6),
@@ -130,6 +121,58 @@ def test_calculate_leverage():
 #         lpBAdjustment=int(adjustment["lp_quote"]),
 #         borrowAAdjustment=int(adjustment["borrow_base"]),
 #         borrowBAdjustment=int(adjustment["borrow_quote"]),
+#     )
+
+
+# def test_adjust_position_leverage_2_7(caplog):
+#     caplog.set_level(logging.INFO)
+#     res = stake.get_principal()
+#     adjustment = stake.calculate_adjustment(
+#         lp_quote=res["token1"],
+#         lp_base=res["token0"],
+#         borrow_quote=res["token1_borrow"],
+#         borrow_base=res["token0_borrow"],
+#         target_leverage=2.7,
+#     )
+#     print(adjustment)
+
+#     lp_base = round(res["token0"] / pow(10, 18), 3)
+#     lp_quote = round(res["token1"] / pow(10, 6), 3)
+
+#     borrow_base = round(res["token0_borrow"] / pow(10, 18), 3)
+#     borrow_quote = round(res["token1_borrow"] / pow(10, 6), 3)
+
+#     print(f"LP, Base: {lp_base} Quote: {lp_quote}")
+#     print(f"Borrow, Base: {borrow_base} Quote: {borrow_quote}")
+
+#     lp_base_adjustment = round(adjustment["lp_base"] / pow(10, 18), 3)
+#     lp_quote_adjustment = round(adjustment["lp_quote"] / pow(10, 6), 3)
+#     borrow_base_adjustment = round(adjustment["borrow_base"] / pow(10, 18), 3)
+#     borrow_quote_adjustment = round(adjustment["borrow_quote"] / pow(10, 6), 3)
+
+#     print(f"LP Adjustment, Base: {lp_base_adjustment} Quote: {lp_quote_adjustment}")
+#     print(
+#         f"Borrow Adjustment, Base: {borrow_base_adjustment} Quote: {borrow_quote_adjustment}"
+#     )
+
+#     adjustment = stake.calculate_adjustment_v2(
+#         lp_quote=res["token1"],
+#         lp_base=res["token0"],
+#         borrow_quote=res["token1_borrow"],
+#         borrow_base=res["token0_borrow"],
+#         target_leverage=2.7,
+#     )
+
+#     lp_base_adjustment = round(adjustment["lp_base"] / pow(10, 18), 3)
+#     lp_quote_adjustment = round(adjustment["lp_quote"] / pow(10, 6), 3)
+#     borrow_base_adjustment = round(adjustment["borrow_base"] / pow(10, 18), 3)
+#     borrow_quote_adjustment = round(adjustment["borrow_quote"] / pow(10, 6), 3)
+
+#     stake.adjust_position(
+#         lpAAdjustment=int(adjustment["lp_base"]),
+#         lpBAdjustment=int(adjustment["lp_quote"]),
+#         borrowAAdjustment=int(adjustment["borrow_base"] * 0.99),
+#         borrowBAdjustment=int(adjustment["borrow_quote"] * 0.99),
 #     )
 
 
