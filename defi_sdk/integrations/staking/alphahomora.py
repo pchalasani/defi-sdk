@@ -341,7 +341,7 @@ class AlphaHomoraStaking(Staking):
         tx = self.bank.functions.execute(pid, self.spell.address, param)
         self.trade.send_transaction_fireblocks(tx)
 
-    def calculate_adjustment(
+    def calculate_adjustment_old(
         self, lp_quote, lp_base, borrow_quote, borrow_base, target_leverage
     ):
         """
@@ -382,6 +382,53 @@ class AlphaHomoraStaking(Staking):
             "lp_base": lp_base_adjustment,
         }
 
+    def calculate_adjustment(
+        self, lp_quote, lp_base, borrow_quote, borrow_base, target_leverage
+    ):
+        """
+        updated version of the above function
+        Instead of deriving amounts by starting from rebalancing borrow, calculate it from net value
+        """
+        price = lp_quote / lp_base
+        lp_value = lp_quote + lp_base * price
+        borrow_value = borrow_quote + borrow_base * price
+        net_value = lp_value - borrow_value
+        logging.debug(f"VALUE BEFORE: {net_value}")
+        # As leverage = LP value / net value, we calculate what is our goal LP
+        target_lp_value = net_value * target_leverage
+        target_lp_quote = target_lp_value / 2
+        target_lp_base = target_lp_quote / price
+
+        # borrowing base should equal base in LP
+        target_borrow_base = target_lp_base
+        # borrowing quote is how much we need to add to reach LP
+        target_borrow_quote = target_lp_quote - net_value
+
+        borrow_quote_adjustment = target_borrow_quote - borrow_quote
+        borrow_base_adjustment = target_borrow_base - borrow_base
+        lp_quote_adjustment = target_lp_quote - lp_quote
+        lp_base_adjustment = target_lp_base - lp_base
+
+        value_after = (
+            target_lp_quote
+            + target_lp_base * price
+            - target_borrow_quote
+            - target_borrow_base * price
+        )
+        logging.debug(f"VALUE AFTER: {value_after}")
+
+        if value_after - 1 > net_value:
+            logging.error(
+                f"ERROR: value after is higher than before, before: {net_value} after: {value_after}"
+            )
+
+        return {
+            "borrow_quote": borrow_quote_adjustment,
+            "borrow_base": borrow_base_adjustment,
+            "lp_quote": lp_quote_adjustment,
+            "lp_base": lp_base_adjustment,
+        }
+
     def increase_borrow(self, borrowAAdjustment, borrowBAdjustment):
         token0 = self.lp.token_info["token0"]
         token1 = self.lp.token_info["token1"]
@@ -413,6 +460,17 @@ class AlphaHomoraStaking(Staking):
 
         token0 = self.lp.token_info["token0"]
         token1 = self.lp.token_info["token1"]
+
+        print("lp_withdrawal", lp_withdrawal)
+        print("borrowAAdjustment", borrowAAdjustment)
+        print("borrowBAdjustment", borrowBAdjustment)
+
+        price = current_holdings["token1"] / current_holdings["token0"]
+        lp_adjustment_value = lpAAdjustment * price + lpBAdjustment
+        borrow_adjustment_value = borrowAAdjustment * price + borrowBAdjustment
+        print("lp_adjustment_value", lp_adjustment_value)
+        print("borrow_adjustment_value", borrow_adjustment_value)
+
         param = self._encode_removal(
             fn_name="removeLiquidityWMasterChef",
             token0=token0,
