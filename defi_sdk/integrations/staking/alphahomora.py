@@ -461,24 +461,15 @@ class AlphaHomoraStaking(Staking):
         token0 = self.lp.token_info["token0"]
         token1 = self.lp.token_info["token1"]
 
-        print("lp_withdrawal", lp_withdrawal)
-        print("borrowAAdjustment", borrowAAdjustment)
-        print("borrowBAdjustment", borrowBAdjustment)
-
-        price = current_holdings["token1"] / current_holdings["token0"]
-        lp_adjustment_value = lpAAdjustment * price + lpBAdjustment
-        borrow_adjustment_value = borrowAAdjustment * price + borrowBAdjustment
-        print("lp_adjustment_value", lp_adjustment_value)
-        print("borrow_adjustment_value", borrow_adjustment_value)
-
         param = self._encode_removal(
             fn_name="removeLiquidityWMasterChef",
             token0=token0,
             token1=token1,
             amtLPTake=lp_withdrawal,
             amtLPWithdraw=0,
-            amtARepay=-borrowAAdjustment,
-            amtBRepay=-borrowBAdjustment,
+            # Debt adjustments scaled down because there is slippage from withdrawing LP
+            amtARepay=-int(borrowAAdjustment * 0.997),
+            amtBRepay=-int(borrowBAdjustment * 0.997),
             amtLPRepay=0,
             amtAMin=0,
             amtBMin=0,
