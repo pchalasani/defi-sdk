@@ -106,6 +106,23 @@ def test_calculate_leverage():
     print(f"Leverage: {lp_value / (lp_value - borrow_value)}")
 
 
+def test_get_rewards(caplog):
+    # caplog.set_level(logging.DEBUG)
+    print(stake.get_rewards())
+
+
+def test_get_pool_info():
+    print(stake.get_pool_info_api(0))
+
+
+def test_get_accumulated_reward():
+    print(stake.get_accumulated_rewards(18))
+
+
+def test_get_harvested_rewards():
+    print(stake.get_harvested_rewards())
+
+
 # def test_adjust_position_leverage_3():
 #     res = stake.get_principal()
 #     adjustment = stake.calculate_adjustment(
