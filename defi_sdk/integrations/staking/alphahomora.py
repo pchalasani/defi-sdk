@@ -1,8 +1,9 @@
 import logging
 import os
+import re
 import requests
 from enum import Enum
-from defi_sdk.util import read_abi
+from defi_sdk.util import read_abi, get_token_price
 from defi_sdk.integrations.staking.staking_generic import Staking
 from defi_sdk.integrations.exchange.uniswap_v2 import UniswapV2
 from defi_sdk.defi_trade import DeFiTrade
@@ -104,7 +105,7 @@ class AlphaHomoraStaking(Staking):
             f"No position found for wrapper address {self.wrapper.address}: {res}"
         )
 
-    def get_pos(self):
+    def get_pool_info_api(self, pool_id: int):
         """
         Returns:
              {
@@ -134,16 +135,10 @@ class AlphaHomoraStaking(Staking):
 
         r = requests.get("https://homora-api.alphafinance.io/v2/43114/pools")
         if r.status_code != 200:
-            raise Exception(f"Could not fetch position: {r.status_code, r.text}")
-        else:
-            print(r.json())
-
-    def get_rewards(self):
-        print(self.wrapper.all_functions())
-        pid, entryRewardPerShare = self.decode_collid(self.position_id)
-        print(pid, entryRewardPerShare)
-        pool_info = self.staking.functions.poolInfo(pid).call()
-        print(pool_info)
+            raise Exception(f"Could not fetch pool info: {r.status_code, r.text}")
+        for i in r.json():
+            if int(i["pid"]) == pool_id:
+                return i
 
     def get_principal(self):
         position_info = self.bank.functions.getPositionInfo(self.position_id).call()
@@ -492,3 +487,64 @@ class AlphaHomoraStaking(Staking):
             raise Exception(
                 "Invalid borrow adjustment, both must be positive or negative"
             )
+
+    def get_accumulated_rewards(self, decimals):
+        precision = 10**decimals
+        (
+            owner,
+            coll_token,
+            coll_id,
+            collateral_size,
+        ) = self.bank.functions.getPositionInfo(self.position_id).call()
+        pid, start_reward_per_share = self.decode_collid(coll_id)
+        pool_info = self.staking.functions.poolInfo(pid).call()
+
+        lpTokenAddress = pool_info[0]
+        allocPoint = pool_info[1]
+        lastRewardTimestamp = pool_info[4]
+        end_reward_per_share = pool_info[2]
+        wrapper_token_per_share = self.wrapper.functions.accJoePerShare().call()
+        lp_amt, reward_debt, _ = self.staking.functions.userInfo(
+            pid, self.trade.w3.toChecksumAddress(self.wrapper.address)
+        ).call()
+
+        extra_reward_per_share = end_reward_per_share - (
+            reward_debt * precision // lp_amt
+        )
+
+        end_token_per_share = wrapper_token_per_share + extra_reward_per_share
+
+        reward_amount = (
+            collateral_size
+            * (end_token_per_share - start_reward_per_share)
+            // precision
+        ) / precision
+
+        return reward_amount
+
+    def get_harvested_rewards(self):
+        pool = self.get_pool_info_api(self.pool_id)
+        token = self.trade.w3.toChecksumAddress(
+            pool["exchange"]["reward"]["rewardTokenAddress"]
+        )
+        token_contract = self.trade.w3.eth.contract(
+            token, abi=read_abi(os.getenv("ERC20"), "token")
+        )
+        balance = token_contract.functions.balanceOf(self.trade.user).call()
+        decimals = token_contract.functions.decimals().call()
+
+        return {
+            "token": token,
+            "balance": balance / pow(10, decimals),
+            "decimals": decimals,
+        }
+
+    def get_rewards(self):
+        harvested_tokens = self.get_harvested_rewards()
+        accumulated_tokens = self.get_accumulated_rewards(harvested_tokens["decimals"])
+        total = harvested_tokens["balance"] + accumulated_tokens
+
+        price = get_token_price(harvested_tokens["token"], chain=self.trade.network)[
+            "price"
+        ]
+        return {"reward_tokens": total, "reward_value": total * price}
