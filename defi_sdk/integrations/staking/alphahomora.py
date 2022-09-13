@@ -93,7 +93,6 @@ class AlphaHomoraStaking(Staking):
 
     def get_position_id(self) -> int:
         res = self.get_position()
-        print(res)
         for i in res["data"]["positions"]:
             if (
                 int(i["collateralSize"]) != 0
