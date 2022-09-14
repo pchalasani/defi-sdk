@@ -1,4 +1,7 @@
 import os
+import sys
+
+print(os.getcwd())
 from defi_sdk.event_reader import EventReader
 from defi_sdk.util import get_google_secret, read_abi
 
@@ -76,3 +79,49 @@ def get_multiple_addresses_multiple_events():
         1000,
     )
     return event_list
+
+
+def get_lp_historical_prices():
+    """ "
+    Example for getting prices
+    Spot price is defined as reserve / reserve
+    """
+    reader = EventReader("mainnet", threads=10)
+
+    uniswap_dai_usdc = "0xAE461cA67B15dc8dc81CE7615e0320dA1A9aB8D5"
+    contract_abi = read_abi(address=uniswap_dai_usdc)
+    event_abis = [("Sync", contract_abi)]
+    current_block = reader.w3.eth.block_number
+    event_list = reader.get_events(
+        event_abis,
+        [uniswap_dai_usdc],
+        current_block - 10000,
+        current_block,
+        block_interval=1000,
+        filter=[],
+    )
+
+    for i in event_list:
+        print(
+            "Price: ",
+            (i["args"]["reserve0"] / pow(10, 18))
+            / (i["args"]["reserve1"] / pow(10, 6)),
+        )
+
+    def get_amount_out(amount_in, token_in, reserve0, reserve1):
+        """
+        Define how much to get out of a swap with given reserves and amount in
+        """
+        amount_in_with_fee = amount_in * 0.997
+        if token_in == 0:
+            numerator = amount_in_with_fee * reserve1
+            denominator = reserve0 + amount_in
+        else:
+            numerator = amount_in_with_fee * reserve0
+            denominator = reserve1 + amount_in
+        amount_out = numerator / denominator
+        return amount_out
+
+
+if __name__ == "__main__":
+    get_lp_historical_prices()
