@@ -127,3 +127,13 @@ class AaveV3(Lending):
         if self.trade.send_tx:
             logging.info("Sent Aave v3 repay transaction")
         return True
+
+    def get_health_factor(self):
+        """
+        Aave health factor is something ** 18 and should be divided by 10 ** 18
+        to get a human-readable value
+        """
+        data = self.aave_lending_pool_v3.functions.getUserAccountData(
+            self.trade.user
+        ).call()
+        return data[5]
