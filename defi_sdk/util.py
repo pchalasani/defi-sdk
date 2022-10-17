@@ -13,6 +13,9 @@ from pdpyras import APISession, EventsAPISession
 
 ETHERSCAN = "https://api.etherscan.io/api"
 POLYGONSCAN = "https://api.polygonscan.com/api"
+ARBISCAN = "https://api.arbiscan.io/api"
+# os.environ["GCLOUD_PROJECT"] = "market-data-338801"
+# os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/Users/pchalasani/Documents/keys/market-data-338801-0096a5d7fa59.json"
 
 client = storage.Client()
 bucket = client.get_bucket("smart-contract-abis")
@@ -108,6 +111,10 @@ def get_abi_etherscan(address, network="mainnet"):
     elif network == "polygon":
         params["apikey"] = os.environ.get("polygonscan")
         r = requests.get(POLYGONSCAN, params=params)
+    elif network == "arbitrum":
+        params["apikey"] = os.environ.get("arbiscan")
+        r = requests.get(ARBISCAN, params=params)
+
     res = r.json()
     try:
         if int(res["status"]) != 1:
